@@ -57,13 +57,13 @@ namespace RatKing.SUS {
 		}
 
 		public Action<T> ScoreCalculationMinMax(Base.RangeFloat range) {
-			lastCalculatedScore = Base.Math.Remap(lastCalculatedScore, this.scoreCalculationMinMax.min, this.scoreCalculationMinMax.max, range.min, range.max);
+			lastCalculatedScore = scoreCalculationMinMax.RemapTo(range, lastCalculatedScore);
 			this.scoreCalculationMinMax = range;
 			return this;
 		}
 
 		public Action<T> ScoreCalculationMinMax(float min, float max) {
-			lastCalculatedScore = Base.Math.Remap(lastCalculatedScore, this.scoreCalculationMinMax.min, this.scoreCalculationMinMax.max, min, max);
+			lastCalculatedScore = scoreCalculationMinMax.RemapTo(min, max, lastCalculatedScore);
 			this.scoreCalculationMinMax = new Base.RangeFloat(min, max);
 			return this;
 		}
