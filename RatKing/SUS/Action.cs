@@ -27,6 +27,143 @@ namespace RatKing.SUS {
 
 	//
 
+	public class Action {
+		public System.Action onStart;
+		public System.Action onUpdate;
+		public System.Action onStop;
+		public Consideration[] considerations;
+		public Base.RangeFloat scoreCalculationMinMax = new Base.RangeFloat(0f, 1f);
+		public ScoreCalculationMethod scoreCalculationStandardMethod = ScoreCalculationMethod.Multiply;
+		public float scoreCalculationTime = 0f;
+		public float lastCalculatedScore = 0f;
+		public string id;
+		public object userData;
+		public bool getsConsidered = true;
+		//
+		float curScoreCalculateTime = 0f;
+
+		//
+
+		public Action(string id = null, System.Action onStart = null, System.Action onUpdate = null, System.Action onStop = null) {
+			this.id = id;
+			this.onStart = onStart;
+			this.onUpdate = onUpdate;
+			this.onStop = onStop;
+		}
+
+		public Action Considerations(params Consideration[] considerations) {
+			this.considerations = considerations;
+			return this;
+		}
+
+		public Action ScoreCalculationMinMax(Base.RangeFloat range) {
+			lastCalculatedScore = scoreCalculationMinMax.RemapTo(range, lastCalculatedScore);
+			this.scoreCalculationMinMax = range;
+			return this;
+		}
+
+		public Action ScoreCalculationMinMax(float min, float max) {
+			lastCalculatedScore = scoreCalculationMinMax.RemapTo(min, max, lastCalculatedScore);
+			this.scoreCalculationMinMax = new Base.RangeFloat(min, max);
+			return this;
+		}
+
+		public Action ScoreCalculationStandardMethod(ScoreCalculationMethod scoreCalculationMethod) {
+			this.scoreCalculationStandardMethod = scoreCalculationMethod;
+			return this;
+		}
+
+		public Action ScoreCalculationTime(float scoreCalculationTime, bool randomizeStartTime = true) {
+			this.scoreCalculationTime = scoreCalculationTime;
+			if (randomizeStartTime) { this.curScoreCalculateTime = Random.value * scoreCalculationTime; }
+			return this;
+		}
+
+		public Action UserData(object userData) {
+			this.userData = userData;
+			return this;
+		}
+
+		//
+
+		public void Calculate(float dt) {
+			curScoreCalculateTime += dt;
+			if (curScoreCalculateTime < scoreCalculationTime) { return; }
+			curScoreCalculateTime = 0f;
+			var considerationCount = considerations.Length;
+			if (considerationCount == 0) {
+				lastCalculatedScore = scoreCalculationMinMax.min;
+			}
+			else if (considerationCount == 1) {
+				lastCalculatedScore = considerations[0].lastScore = considerations[0].function();
+				lastCalculatedScore = scoreCalculationMinMax.Lerp(lastCalculatedScore);
+			}
+			else {
+				var curCon = considerations[0];
+				switch (curCon.method == ScoreCalculationMethod.Standard ? scoreCalculationStandardMethod : curCon.method) {
+					default: lastCalculatedScore = (curCon.lastScore = curCon.function()); break;
+					case ScoreCalculationMethod.Average: lastCalculatedScore = (curCon.lastScore = curCon.function()) / considerationCount; break;
+				}
+				for (int i = 1; i < considerationCount; ++i) {
+					curCon = considerations[i];
+					switch (curCon.method == ScoreCalculationMethod.Standard ? scoreCalculationStandardMethod : curCon.method) {
+						default: case ScoreCalculationMethod.Multiply: lastCalculatedScore *= (curCon.lastScore = curCon.function()); break;
+						case ScoreCalculationMethod.Max: lastCalculatedScore = Mathf.Max(lastCalculatedScore, (curCon.lastScore = curCon.function())); break;
+						case ScoreCalculationMethod.Min: lastCalculatedScore = Mathf.Min(lastCalculatedScore, (curCon.lastScore = curCon.function())); break;
+						case ScoreCalculationMethod.Add: lastCalculatedScore += (curCon.lastScore = curCon.function()); break;
+						case ScoreCalculationMethod.Average: lastCalculatedScore += (curCon.lastScore = curCon.function()) / considerationCount; break;
+					}
+				}
+
+				lastCalculatedScore = scoreCalculationMinMax.Lerp(lastCalculatedScore);
+			}
+		}
+
+		void CalculateScoreMultiply() {
+			lastCalculatedScore = 1f;
+			foreach (var c in considerations) {
+				c.lastScore = c.function();
+				if (c.lastScore == 0f) { lastCalculatedScore = 0f; break; }
+				lastCalculatedScore *= c.lastScore;
+			}
+		}
+
+		void CalculateScoreMax() {
+			lastCalculatedScore = 0f;
+			foreach (var c in considerations) {
+				lastCalculatedScore = Mathf.Max(lastCalculatedScore, c.lastScore = c.function());
+			}
+		}
+
+		void CalculateScoreMin() {
+			lastCalculatedScore = float.PositiveInfinity;
+			foreach (var c in considerations) {
+				lastCalculatedScore = Mathf.Min(lastCalculatedScore, c.lastScore = c.function());
+			}
+		}
+
+		void CalculateScoreAdd() {
+			lastCalculatedScore = 0f;
+			foreach (var c in considerations) {
+				lastCalculatedScore += c.lastScore = c.function();
+			}
+		}
+
+		void CalculateScoreAverage() {
+			lastCalculatedScore = 0f;
+			foreach (var c in considerations) {
+				lastCalculatedScore += c.lastScore = c.function();
+			}
+			lastCalculatedScore /= considerations.Length;
+		}
+		
+		//
+		
+		public float GetRemainingCalculationTime() {
+			return scoreCalculationTime - curScoreCalculateTime;
+		}
+	}
+
 	public class Action<T> {
 		public System.Action<T> onStart;
 		public System.Action<T> onUpdate;
