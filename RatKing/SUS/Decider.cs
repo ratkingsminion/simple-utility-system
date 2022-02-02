@@ -37,22 +37,22 @@ namespace RatKing.SUS {
 	}
 #endif
 
-	public class Decider {
+	public class Decider<TId> {
 
-		public Action ActiveAction { get; private set; } = null;
-		public Action ConsideredAction { get; private set; } = null; // only valid during consideration!
-		public Action ThisAction { get; private set; } = null; // only valid during consideration and execution of active action!
+		public Action<TId> ActiveAction { get; private set; } = null;
+		public Action<TId> ConsideredAction { get; private set; } = null; // only valid during consideration!
+		public Action<TId> ThisAction { get; private set; } = null; // only valid during consideration and execution of active action!
 		public float ActiveActionAge => Time.time - actionChangeTime;
 		public bool IsConsideringActiveAction => ActiveAction == ConsideredAction;
-		public event System.Action<Action, Action> OnActionChange = null; // target, prevAction, nextAction
-		List<Action> actions = new List<Action>();
+		public event System.Action<Action<TId>, Action<TId>> OnActionChange = null; // target, prevAction, nextAction
+		List<Action<TId>> actions = new List<Action<TId>>();
 		float actionChangeTime = 0f;
 
 		//
 
 #if ALLOW_IMGUI_DEBUG
-		public Decider(object target, DebugDisplayMode debugDisplayMode = DebugDisplayMode.None) {
-			if (debugDisplayMode != DebugDisplayMode.None) { DeciderDebugDraw.Inst.AddDebugDraw(target, DebugGUI, debugDisplayMode); }
+		public Decider(DebugDisplayMode debugDisplayMode = DebugDisplayMode.None) {
+			if (debugDisplayMode != DebugDisplayMode.None) { DeciderDebugDraw.Inst.AddDebugDraw(this, DebugGUI, debugDisplayMode); }
 			this.actionChangeTime = Time.time;
 		}
 #else
@@ -74,7 +74,7 @@ namespace RatKing.SUS {
 			ThisAction = ConsideredAction = null;
 
 			// choose action
-			Action chosenAction = null;
+			Action<TId> chosenAction = null;
 			var score = float.NegativeInfinity;
 			foreach (var pa in actions) {
 				if (pa.lastCalculatedScore > score) {
@@ -124,7 +124,7 @@ namespace RatKing.SUS {
 				if (text != "") { text += "\n"; }
 				if (a == ActiveAction) { text += "<color=yellow>"; }
 				text += a.lastCalculatedScore.ToString("0.00");
-				if (!string.IsNullOrWhiteSpace(a.id)) { text += $" {a.id}"; }
+				if (!a.id.Equals(default(TId))) { text += $" {a.id}"; }
 				if (a.scoreCalculationTime > 0f) { text += $" ({a.GetRemainingCalculationTime().ToString("0.00")})"; }
 				text += $" [{a.scoreCalculationStandardMethod.ToShortString()}]";
 				for (int i = 0; i < a.considerations.Length; ++i) {
@@ -193,8 +193,9 @@ namespace RatKing.SUS {
 		/// <param name="onStop">called when this action becomes un-chosen</param>
 		/// <param name="considerations">considerations calculate the score; use decider.Consider() helper functions to create them</param>
 		/// <returns>the created and added possible action</returns>
-		public Action AddAction(string id, System.Action onStart, System.Action onUpdate, System.Action onStop, params Consideration[] considerations) {
-			var pa = new Action(id, onStart, onUpdate, onStop) { considerations = considerations };
+		public Action<TId> AddAction(TId id, System.Action onStart, System.Action onUpdate, System.Action onStop, params Consideration[] considerations) {
+			if (id.Equals(default(TId))) { Debug.Log("The default cannot be used as ID!"); return null; }
+			var pa = new Action<TId>(id, onStart, onUpdate, onStop) { considerations = considerations };
 			actions.Add(pa);
 			return pa;
 		}
@@ -207,8 +208,9 @@ namespace RatKing.SUS {
 		/// <param name="onUpdate">called as long this action is chosen</param>
 		/// <param name="considerations">considerations calculate the score; use decider.Consider() helper functions to create them</param>
 		/// <returns>the created and added possible action</returns>
-		public Action AddAction(string id, System.Action onStart, System.Action onUpdate, params Consideration[] considerations) {
-			var pa = new Action(id, onStart, onUpdate) { considerations = considerations };
+		public Action<TId> AddAction(TId id, System.Action onStart, System.Action onUpdate, params Consideration[] considerations) {
+			if (id.Equals(default(TId))) { Debug.Log("The default cannot be used as ID!"); return null; }
+			var pa = new Action<TId>(id, onStart, onUpdate) { considerations = considerations };
 			actions.Add(pa);
 			return pa;
 		}
@@ -220,8 +222,9 @@ namespace RatKing.SUS {
 		/// <param name="onStart">called when this action gets chosen</param>
 		/// <param name="considerations">considerations calculate the score; use decider.Consider() helper functions to create them</param>
 		/// <returns>the created and added possible action</returns>
-		public Action AddAction(string id, System.Action onStart, params Consideration[] considerations) {
-			var pa = new Action(id, onStart) { considerations = considerations };
+		public Action<TId> AddAction(TId id, System.Action onStart, params Consideration[] considerations) {
+			if (id.Equals(default(TId))) { Debug.Log("The default cannot be used as ID!"); return null; }
+			var pa = new Action<TId>(id, onStart) { considerations = considerations };
 			actions.Add(pa);
 			return pa;
 		}
@@ -232,61 +235,30 @@ namespace RatKing.SUS {
 		/// <param name="id">name that will be shown in the debug display</param>
 		/// <param name="considerations">considerations calculate the score; use decider.Consider() helper functions to create them</param>
 		/// <returns>the created and added possible action</returns>
-		public Action AddAction(string id, params Consideration[] considerations) {
-			var pa = new Action(id) { considerations = considerations };
+		public Action<TId> AddAction(TId id, params Consideration[] considerations) {
+			if (id.Equals(default(TId))) { Debug.Log("The default cannot be used as ID!"); return null; }
+			var pa = new Action<TId>(id) { considerations = considerations };
 			actions.Add(pa);
 			return pa;
 		}
-
-		// saving/loading
-
-		public bool SerializeActiveAction(SimpleJSON.JSONNode node) {
-			if (ActiveAction == null) { return false; }
-			node.Add("action_id", ActiveAction.id);
-			node.Add("action_age", ActiveActionAge);
-			foreach (var a in actions) {
-				node.Add($"action_{a.id}_score", a.lastCalculatedScore);
-				foreach (var c in a.considerations) {
-					node.Add($"action_{a.id}_consider_{c.id}", c.lastScore);
-				}
-			}
-			return true;
-		}
-
-		public bool DeserializeActiveAction(SimpleJSON.JSONNode node) {
-			if (!node.HasKey("action_id")) { return false; }
-			foreach (var a in actions) {
-				a.lastCalculatedScore = node[$"action_{a.id}_score"].AsFloat;
-				foreach (var c in a.considerations) {
-					c.lastScore = node[$"action_{a.id}_consider_{c.id}"];
-				}
-			}
-			var id = node["action_id"].Value;
-			ThisAction = ActiveAction = actions.Find(a => a.id == id);
-			actionChangeTime = Time.time - node["action_age"].AsFloat;
-			ActiveAction.onStart?.Invoke();
-			OnActionChange?.Invoke(null, ActiveAction);
-			ThisAction = null;
-			return true;
-		}
 	}
 
-	public class Decider<T> where T : class {
-		T target;
-		public T Target => target;
-		public Action<T> ActiveAction { get; private set; } = null;
-		public Action<T> ConsideredAction { get; private set; } = null; // only valid during consideration!
-		public Action<T> ThisAction { get; private set; } = null; // only valid during consideration and execution of active action!
+	public class Decider<TTarget, TId> where TTarget : class {
+		TTarget target;
+		public TTarget Target => target;
+		public Action<TTarget, TId> ActiveAction { get; private set; } = null;
+		public Action<TTarget, TId> ConsideredAction { get; private set; } = null; // only valid during consideration!
+		public Action<TTarget, TId> ThisAction { get; private set; } = null; // only valid during consideration and execution of active action!
 		public float ActiveActionAge => Time.time - actionChangeTime;
 		public bool IsConsideringActiveAction => ActiveAction == ConsideredAction;
-		public event System.Action<T, Action<T>, Action<T>> OnActionChange = null; // target, prevAction, nextAction
-		List<Action<T>> actions = new List<Action<T>>();
+		public event System.Action<TTarget, Action<TTarget, TId>, Action<TTarget, TId>> OnActionChange = null; // target, prevAction, nextAction
+		List<Action<TTarget, TId>> actions = new List<Action<TTarget, TId>>();
 		float actionChangeTime = 0f;
 
 		//
 
 #if ALLOW_IMGUI_DEBUG
-		public Decider(T target, DebugDisplayMode debugDisplayMode = DebugDisplayMode.None) {
+		public Decider(TTarget target, DebugDisplayMode debugDisplayMode = DebugDisplayMode.None) {
 			if (debugDisplayMode != DebugDisplayMode.None) { DeciderDebugDraw.Inst.AddDebugDraw(target, DebugGUI, debugDisplayMode); }
 			this.target = target;
 			this.actionChangeTime = Time.time;
@@ -311,7 +283,7 @@ namespace RatKing.SUS {
 			ThisAction = ConsideredAction = null;
 
 			// choose action
-			Action<T> chosenAction = null;
+			Action<TTarget, TId> chosenAction = null;
 			var score = float.NegativeInfinity;
 			foreach (var pa in actions) {
 				if (pa.lastCalculatedScore > score) {
@@ -361,7 +333,7 @@ namespace RatKing.SUS {
 				if (text != "") { text += "\n"; }
 				if (a == ActiveAction) { text += "<color=yellow>"; }
 				text += a.lastCalculatedScore.ToString("0.00");
-				if (!string.IsNullOrWhiteSpace(a.id)) { text += $" {a.id}"; }
+				if (!a.id.Equals(default(TId))) { text += $" {a.id}"; }
 				if (a.scoreCalculationTime > 0f) { text += $" ({a.GetRemainingCalculationTime().ToString("0.00")})"; }
 				text += $" [{a.scoreCalculationStandardMethod.ToShortString()}]";
 				for (int i = 0; i < a.considerations.Length; ++i) {
@@ -385,8 +357,8 @@ namespace RatKing.SUS {
 		/// <param name="id">name that will be shown in the debug display</param>
 		/// <param name="function">function that creates a score</param>
 		/// <returns>the new Consideration</returns>
-		public Consideration<T> Consider(string id, System.Func<T, float> function) {
-			return new Consideration<T>(id, function);
+		public Consideration<TTarget> Consider(string id, System.Func<TTarget, float> function) {
+			return new Consideration<TTarget>(id, function);
 		}
 		
 		/// <summary>
@@ -394,8 +366,8 @@ namespace RatKing.SUS {
 		/// </summary>
 		/// <param name="function">function that creates a score</param>
 		/// <returns>the new Consideration</returns>
-		public Consideration<T> Consider(System.Func<T, float> function) {
-			return new Consideration<T>(function);
+		public Consideration<TTarget> Consider(System.Func<TTarget, float> function) {
+			return new Consideration<TTarget>(function);
 		}
 
 		/// <summary>
@@ -405,8 +377,8 @@ namespace RatKing.SUS {
 		/// <param name="function">function that creates a score</param>
 		/// <param name="calculationMethod">how to calculate this consideration (in relation to the other considerations)</param>
 		/// <returns>the new Consideration</returns>
-		public Consideration<T> Consider(string id, System.Func<T, float> function, ScoreCalculationMethod calculationMethod) {
-			return new Consideration<T>(id, function, calculationMethod);
+		public Consideration<TTarget> Consider(string id, System.Func<TTarget, float> function, ScoreCalculationMethod calculationMethod) {
+			return new Consideration<TTarget>(id, function, calculationMethod);
 		}
 		
 		/// <summary>
@@ -415,8 +387,8 @@ namespace RatKing.SUS {
 		/// <param name="function">function that creates a score</param>
 		/// <param name="calculationMethod">how to calculate this consideration (in relation to the other considerations)</param>
 		/// <returns>the new Consideration</returns>
-		public Consideration<T> Consider(System.Func<T, float> function, ScoreCalculationMethod calculationMethod) {
-			return new Consideration<T>(function, calculationMethod);
+		public Consideration<TTarget> Consider(System.Func<TTarget, float> function, ScoreCalculationMethod calculationMethod) {
+			return new Consideration<TTarget>(function, calculationMethod);
 		}
 
 		//
@@ -430,8 +402,9 @@ namespace RatKing.SUS {
 		/// <param name="onStop">called when this action becomes un-chosen</param>
 		/// <param name="considerations">considerations calculate the score; use decider.Consider() helper functions to create them</param>
 		/// <returns>the created and added possible action</returns>
-		public Action<T> AddAction(string id, System.Action<T> onStart, System.Action<T> onUpdate, System.Action<T> onStop, params Consideration<T>[] considerations) {
-			var pa = new Action<T>(id, onStart, onUpdate, onStop) { considerations = considerations };
+		public Action<TTarget, TId> AddAction(TId id, System.Action<TTarget> onStart, System.Action<TTarget> onUpdate, System.Action<TTarget> onStop, params Consideration<TTarget>[] considerations) {
+			if (id.Equals(default(TId))) { Debug.Log("The default cannot be used as ID!"); return null; }
+			var pa = new Action<TTarget, TId>(id, onStart, onUpdate, onStop) { considerations = considerations };
 			actions.Add(pa);
 			return pa;
 		}
@@ -444,8 +417,9 @@ namespace RatKing.SUS {
 		/// <param name="onUpdate">called as long this action is chosen</param>
 		/// <param name="considerations">considerations calculate the score; use decider.Consider() helper functions to create them</param>
 		/// <returns>the created and added possible action</returns>
-		public Action<T> AddAction(string id, System.Action<T> onStart, System.Action<T> onUpdate, params Consideration<T>[] considerations) {
-			var pa = new Action<T>(id, onStart, onUpdate) { considerations = considerations };
+		public Action<TTarget, TId> AddAction(TId id, System.Action<TTarget> onStart, System.Action<TTarget> onUpdate, params Consideration<TTarget>[] considerations) {
+			if (id.Equals(default(TId))) { Debug.Log("The default cannot be used as ID!"); return null; }
+			var pa = new Action<TTarget, TId>(id, onStart, onUpdate) { considerations = considerations };
 			actions.Add(pa);
 			return pa;
 		}
@@ -457,8 +431,9 @@ namespace RatKing.SUS {
 		/// <param name="onStart">called when this action gets chosen</param>
 		/// <param name="considerations">considerations calculate the score; use decider.Consider() helper functions to create them</param>
 		/// <returns>the created and added possible action</returns>
-		public Action<T> AddAction(string id, System.Action<T> onStart, params Consideration<T>[] considerations) {
-			var pa = new Action<T>(id, onStart) { considerations = considerations };
+		public Action<TTarget, TId> AddAction(TId id, System.Action<TTarget> onStart, params Consideration<TTarget>[] considerations) {
+			if (id.Equals(default(TId))) { Debug.Log("The default cannot be used as ID!"); return null; }
+			var pa = new Action<TTarget, TId>(id, onStart) { considerations = considerations };
 			actions.Add(pa);
 			return pa;
 		}
@@ -469,42 +444,11 @@ namespace RatKing.SUS {
 		/// <param name="id">name that will be shown in the debug display</param>
 		/// <param name="considerations">considerations calculate the score; use decider.Consider() helper functions to create them</param>
 		/// <returns>the created and added possible action</returns>
-		public Action<T> AddAction(string id, params Consideration<T>[] considerations) {
-			var pa = new Action<T>(id) { considerations = considerations };
+		public Action<TTarget, TId> AddAction(TId id, params Consideration<TTarget>[] considerations) {
+			if (id.Equals(default(TId))) { Debug.Log("The default cannot be used as ID!"); return null; }
+			var pa = new Action<TTarget, TId>(id) { considerations = considerations };
 			actions.Add(pa);
 			return pa;
-		}
-
-		// saving/loading
-
-		public bool SerializeActiveAction(SimpleJSON.JSONNode node) {
-			if (ActiveAction == null) { return false; }
-			node.Add("action_id", ActiveAction.id);
-			node.Add("action_age", ActiveActionAge);
-			foreach (var a in actions) {
-				node.Add($"action_{a.id}_score", a.lastCalculatedScore);
-				foreach (var c in a.considerations) {
-					node.Add($"action_{a.id}_consider_{c.id}", c.lastScore);
-				}
-			}
-			return true;
-		}
-
-		public bool DeserializeActiveAction(SimpleJSON.JSONNode node) {
-			if (!node.HasKey("action_id")) { return false; }
-			foreach (var a in actions) {
-				a.lastCalculatedScore = node[$"action_{a.id}_score"].AsFloat;
-				foreach (var c in a.considerations) {
-					c.lastScore = node[$"action_{a.id}_consider_{c.id}"];
-				}
-			}
-			var id = node["action_id"].Value;
-			ThisAction = ActiveAction = actions.Find(a => a.id == id);
-			actionChangeTime = Time.time - node["action_age"].AsFloat;
-			ActiveAction.onStart?.Invoke(target);
-			OnActionChange?.Invoke(target, null, ActiveAction);
-			ThisAction = null;
-			return true;
 		}
 	}
 

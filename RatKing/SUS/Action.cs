@@ -27,7 +27,7 @@ namespace RatKing.SUS {
 
 	//
 
-	public class Action {
+	public class Action<TId> {
 		public System.Action onStart;
 		public System.Action onUpdate;
 		public System.Action onStop;
@@ -36,7 +36,7 @@ namespace RatKing.SUS {
 		public ScoreCalculationMethod scoreCalculationStandardMethod = ScoreCalculationMethod.Multiply;
 		public float scoreCalculationTime = 0f;
 		public float lastCalculatedScore = 0f;
-		public string id;
+		public TId id;
 		public object userData;
 		public bool getsConsidered = true;
 		//
@@ -44,42 +44,42 @@ namespace RatKing.SUS {
 
 		//
 
-		public Action(string id = null, System.Action onStart = null, System.Action onUpdate = null, System.Action onStop = null) {
+		public Action(TId id = default, System.Action onStart = null, System.Action onUpdate = null, System.Action onStop = null) {
 			this.id = id;
 			this.onStart = onStart;
 			this.onUpdate = onUpdate;
 			this.onStop = onStop;
 		}
 
-		public Action Considerations(params Consideration[] considerations) {
+		public Action<TId> Considerations(params Consideration[] considerations) {
 			this.considerations = considerations;
 			return this;
 		}
 
-		public Action ScoreCalculationMinMax(Base.RangeFloat range) {
+		public Action<TId> ScoreCalculationMinMax(Base.RangeFloat range) {
 			lastCalculatedScore = scoreCalculationMinMax.RemapTo(range, lastCalculatedScore);
 			this.scoreCalculationMinMax = range;
 			return this;
 		}
 
-		public Action ScoreCalculationMinMax(float min, float max) {
+		public Action<TId> ScoreCalculationMinMax(float min, float max) {
 			lastCalculatedScore = scoreCalculationMinMax.RemapTo(min, max, lastCalculatedScore);
 			this.scoreCalculationMinMax = new Base.RangeFloat(min, max);
 			return this;
 		}
 
-		public Action ScoreCalculationStandardMethod(ScoreCalculationMethod scoreCalculationMethod) {
+		public Action<TId> ScoreCalculationStandardMethod(ScoreCalculationMethod scoreCalculationMethod) {
 			this.scoreCalculationStandardMethod = scoreCalculationMethod;
 			return this;
 		}
 
-		public Action ScoreCalculationTime(float scoreCalculationTime, bool randomizeStartTime = true) {
+		public Action<TId> ScoreCalculationTime(float scoreCalculationTime, bool randomizeStartTime = true) {
 			this.scoreCalculationTime = scoreCalculationTime;
 			if (randomizeStartTime) { this.curScoreCalculateTime = Random.value * scoreCalculationTime; }
 			return this;
 		}
 
-		public Action UserData(object userData) {
+		public Action<TId> UserData(object userData) {
 			this.userData = userData;
 			return this;
 		}
@@ -164,16 +164,16 @@ namespace RatKing.SUS {
 		}
 	}
 
-	public class Action<T> {
-		public System.Action<T> onStart;
-		public System.Action<T> onUpdate;
-		public System.Action<T> onStop;
-		public Consideration<T>[] considerations;
+	public class Action<TTarget, TId> {
+		public System.Action<TTarget> onStart;
+		public System.Action<TTarget> onUpdate;
+		public System.Action<TTarget> onStop;
+		public Consideration<TTarget>[] considerations;
 		public Base.RangeFloat scoreCalculationMinMax = new Base.RangeFloat(0f, 1f);
 		public ScoreCalculationMethod scoreCalculationStandardMethod = ScoreCalculationMethod.Multiply;
 		public float scoreCalculationTime = 0f;
 		public float lastCalculatedScore = 0f;
-		public string id;
+		public TId id;
 		public object userData;
 		public bool getsConsidered = true;
 		//
@@ -181,49 +181,49 @@ namespace RatKing.SUS {
 
 		//
 
-		public Action(string id = null, System.Action<T> onStart = null, System.Action<T> onUpdate = null, System.Action<T> onStop = null) {
+		public Action(TId id = default, System.Action<TTarget> onStart = null, System.Action<TTarget> onUpdate = null, System.Action<TTarget> onStop = null) {
 			this.id = id;
 			this.onStart = onStart;
 			this.onUpdate = onUpdate;
 			this.onStop = onStop;
 		}
 
-		public Action<T> Considerations(params Consideration<T>[] considerations) {
+		public Action<TTarget, TId> Considerations(params Consideration<TTarget>[] considerations) {
 			this.considerations = considerations;
 			return this;
 		}
 
-		public Action<T> ScoreCalculationMinMax(Base.RangeFloat range) {
+		public Action<TTarget, TId> ScoreCalculationMinMax(Base.RangeFloat range) {
 			lastCalculatedScore = scoreCalculationMinMax.RemapTo(range, lastCalculatedScore);
 			this.scoreCalculationMinMax = range;
 			return this;
 		}
 
-		public Action<T> ScoreCalculationMinMax(float min, float max) {
+		public Action<TTarget, TId> ScoreCalculationMinMax(float min, float max) {
 			lastCalculatedScore = scoreCalculationMinMax.RemapTo(min, max, lastCalculatedScore);
 			this.scoreCalculationMinMax = new Base.RangeFloat(min, max);
 			return this;
 		}
 
-		public Action<T> ScoreCalculationStandardMethod(ScoreCalculationMethod scoreCalculationMethod) {
+		public Action<TTarget, TId> ScoreCalculationStandardMethod(ScoreCalculationMethod scoreCalculationMethod) {
 			this.scoreCalculationStandardMethod = scoreCalculationMethod;
 			return this;
 		}
 
-		public Action<T> ScoreCalculationTime(float scoreCalculationTime, bool randomizeStartTime = true) {
+		public Action<TTarget, TId> ScoreCalculationTime(float scoreCalculationTime, bool randomizeStartTime = true) {
 			this.scoreCalculationTime = scoreCalculationTime;
 			if (randomizeStartTime) { this.curScoreCalculateTime = Random.value * scoreCalculationTime; }
 			return this;
 		}
 
-		public Action<T> UserData(object userData) {
+		public Action<TTarget, TId> UserData(object userData) {
 			this.userData = userData;
 			return this;
 		}
 
 		//
 
-		public void Calculate(ref T target, float dt) {
+		public void Calculate(ref TTarget target, float dt) {
 			curScoreCalculateTime += dt;
 			if (curScoreCalculateTime < scoreCalculationTime) { return; }
 			curScoreCalculateTime = 0f;
@@ -256,7 +256,7 @@ namespace RatKing.SUS {
 			}
 		}
 
-		void CalculateScoreMultiply(ref T target) {
+		void CalculateScoreMultiply(ref TTarget target) {
 			lastCalculatedScore = 1f;
 			foreach (var c in considerations) {
 				c.lastScore = c.function(target);
@@ -265,28 +265,28 @@ namespace RatKing.SUS {
 			}
 		}
 
-		void CalculateScoreMax(ref T target) {
+		void CalculateScoreMax(ref TTarget target) {
 			lastCalculatedScore = 0f;
 			foreach (var c in considerations) {
 				lastCalculatedScore = Mathf.Max(lastCalculatedScore, c.lastScore = c.function(target));
 			}
 		}
 
-		void CalculateScoreMin(ref T target) {
+		void CalculateScoreMin(ref TTarget target) {
 			lastCalculatedScore = float.PositiveInfinity;
 			foreach (var c in considerations) {
 				lastCalculatedScore = Mathf.Min(lastCalculatedScore, c.lastScore = c.function(target));
 			}
 		}
 
-		void CalculateScoreAdd(ref T target) {
+		void CalculateScoreAdd(ref TTarget target) {
 			lastCalculatedScore = 0f;
 			foreach (var c in considerations) {
 				lastCalculatedScore += c.lastScore = c.function(target);
 			}
 		}
 
-		void CalculateScoreAverage(ref T target) {
+		void CalculateScoreAverage(ref TTarget target) {
 			lastCalculatedScore = 0f;
 			foreach (var c in considerations) {
 				lastCalculatedScore += c.lastScore = c.function(target);
