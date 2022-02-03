@@ -101,60 +101,22 @@ namespace RatKing.SUS {
 			else {
 				var curCon = considerations[0];
 				switch (curCon.method == ScoreCalculationMethod.Standard ? scoreCalculationStandardMethod : curCon.method) {
-					default: lastCalculatedScore = (curCon.lastScore = curCon.function()); break;
 					case ScoreCalculationMethod.Average: lastCalculatedScore = (curCon.lastScore = curCon.function()) / considerationCount; break;
+					default: lastCalculatedScore = (curCon.lastScore = curCon.function()); break;
 				}
 				for (int i = 1; i < considerationCount; ++i) {
 					curCon = considerations[i];
 					switch (curCon.method == ScoreCalculationMethod.Standard ? scoreCalculationStandardMethod : curCon.method) {
-						default: case ScoreCalculationMethod.Multiply: lastCalculatedScore *= (curCon.lastScore = curCon.function()); break;
 						case ScoreCalculationMethod.Max: lastCalculatedScore = Mathf.Max(lastCalculatedScore, (curCon.lastScore = curCon.function())); break;
 						case ScoreCalculationMethod.Min: lastCalculatedScore = Mathf.Min(lastCalculatedScore, (curCon.lastScore = curCon.function())); break;
 						case ScoreCalculationMethod.Add: lastCalculatedScore += (curCon.lastScore = curCon.function()); break;
 						case ScoreCalculationMethod.Average: lastCalculatedScore += (curCon.lastScore = curCon.function()) / considerationCount; break;
+						default: case ScoreCalculationMethod.Multiply: lastCalculatedScore *= (curCon.lastScore = curCon.function()); break;
 					}
 				}
 
 				lastCalculatedScore = scoreCalculationMinMax.Lerp(lastCalculatedScore);
 			}
-		}
-
-		void CalculateScoreMultiply() {
-			lastCalculatedScore = 1f;
-			foreach (var c in considerations) {
-				c.lastScore = c.function();
-				if (c.lastScore == 0f) { lastCalculatedScore = 0f; break; }
-				lastCalculatedScore *= c.lastScore;
-			}
-		}
-
-		void CalculateScoreMax() {
-			lastCalculatedScore = 0f;
-			foreach (var c in considerations) {
-				lastCalculatedScore = Mathf.Max(lastCalculatedScore, c.lastScore = c.function());
-			}
-		}
-
-		void CalculateScoreMin() {
-			lastCalculatedScore = float.PositiveInfinity;
-			foreach (var c in considerations) {
-				lastCalculatedScore = Mathf.Min(lastCalculatedScore, c.lastScore = c.function());
-			}
-		}
-
-		void CalculateScoreAdd() {
-			lastCalculatedScore = 0f;
-			foreach (var c in considerations) {
-				lastCalculatedScore += c.lastScore = c.function();
-			}
-		}
-
-		void CalculateScoreAverage() {
-			lastCalculatedScore = 0f;
-			foreach (var c in considerations) {
-				lastCalculatedScore += c.lastScore = c.function();
-			}
-			lastCalculatedScore /= considerations.Length;
 		}
 		
 		//
@@ -238,60 +200,22 @@ namespace RatKing.SUS {
 			else {
 				var curCon = considerations[0];
 				switch (curCon.method == ScoreCalculationMethod.Standard ? scoreCalculationStandardMethod : curCon.method) {
-					default: lastCalculatedScore = (curCon.lastScore = curCon.function(target)); break;
 					case ScoreCalculationMethod.Average: lastCalculatedScore = (curCon.lastScore = curCon.function(target)) / considerationCount; break;
+					default: lastCalculatedScore = (curCon.lastScore = curCon.function(target)); break;
 				}
 				for (int i = 1; i < considerationCount; ++i) {
 					curCon = considerations[i];
 					switch (curCon.method == ScoreCalculationMethod.Standard ? scoreCalculationStandardMethod : curCon.method) {
-						default: case ScoreCalculationMethod.Multiply: lastCalculatedScore *= (curCon.lastScore = curCon.function(target)); break;
 						case ScoreCalculationMethod.Max: lastCalculatedScore = Mathf.Max(lastCalculatedScore, (curCon.lastScore = curCon.function(target))); break;
 						case ScoreCalculationMethod.Min: lastCalculatedScore = Mathf.Min(lastCalculatedScore, (curCon.lastScore = curCon.function(target))); break;
 						case ScoreCalculationMethod.Add: lastCalculatedScore += (curCon.lastScore = curCon.function(target)); break;
 						case ScoreCalculationMethod.Average: lastCalculatedScore += (curCon.lastScore = curCon.function(target)) / considerationCount; break;
+						default: case ScoreCalculationMethod.Multiply: lastCalculatedScore *= (curCon.lastScore = curCon.function(target)); break;
 					}
 				}
 
 				lastCalculatedScore = scoreCalculationMinMax.Lerp(lastCalculatedScore);
 			}
-		}
-
-		void CalculateScoreMultiply(ref TTarget target) {
-			lastCalculatedScore = 1f;
-			foreach (var c in considerations) {
-				c.lastScore = c.function(target);
-				if (c.lastScore == 0f) { lastCalculatedScore = 0f; break; }
-				lastCalculatedScore *= c.lastScore;
-			}
-		}
-
-		void CalculateScoreMax(ref TTarget target) {
-			lastCalculatedScore = 0f;
-			foreach (var c in considerations) {
-				lastCalculatedScore = Mathf.Max(lastCalculatedScore, c.lastScore = c.function(target));
-			}
-		}
-
-		void CalculateScoreMin(ref TTarget target) {
-			lastCalculatedScore = float.PositiveInfinity;
-			foreach (var c in considerations) {
-				lastCalculatedScore = Mathf.Min(lastCalculatedScore, c.lastScore = c.function(target));
-			}
-		}
-
-		void CalculateScoreAdd(ref TTarget target) {
-			lastCalculatedScore = 0f;
-			foreach (var c in considerations) {
-				lastCalculatedScore += c.lastScore = c.function(target);
-			}
-		}
-
-		void CalculateScoreAverage(ref TTarget target) {
-			lastCalculatedScore = 0f;
-			foreach (var c in considerations) {
-				lastCalculatedScore += c.lastScore = c.function(target);
-			}
-			lastCalculatedScore /= considerations.Length;
 		}
 		
 		//

@@ -19,7 +19,7 @@ namespace RatKing.SUS {
 
 		public static DeciderDebugDraw instance;
 		public static DeciderDebugDraw Inst => instance != null ? instance : (instance = new GameObject("<DECIDER_DEBUG>").AddComponent<DeciderDebugDraw>());
-		List<DebugDraw> debugDraws = new List<DebugDraw>();
+		readonly List<DebugDraw> debugDraws = new List<DebugDraw>();
 		public void AddDebugDraw(object target, System.Func<object, float, DebugDraw, float> debugUI, DebugDisplayMode mode) {
 			debugDraws.Add(new DebugDraw() { target = target, draw = debugUI, display = mode });
 		}
@@ -45,7 +45,7 @@ namespace RatKing.SUS {
 		public float ActiveActionAge => Time.time - actionChangeTime;
 		public bool IsConsideringActiveAction => ActiveAction == ConsideredAction;
 		public event System.Action<Action<TId>, Action<TId>> OnActionChange = null; // target, prevAction, nextAction
-		List<Action<TId>> actions = new List<Action<TId>>();
+		readonly List<Action<TId>> actions = new List<Action<TId>>();
 		float actionChangeTime = 0f;
 
 		//
@@ -125,7 +125,7 @@ namespace RatKing.SUS {
 				if (a == ActiveAction) { text += "<color=yellow>"; }
 				text += a.lastCalculatedScore.ToString("0.00");
 				if (!a.id.Equals(default(TId))) { text += $" {a.id}"; }
-				if (a.scoreCalculationTime > 0f) { text += $" ({a.GetRemainingCalculationTime().ToString("0.00")})"; }
+				if (a.scoreCalculationTime > 0f) { text += $" ({a.GetRemainingCalculationTime():0.00})"; }
 				text += $" [{a.scoreCalculationStandardMethod.ToShortString()}]";
 				for (int i = 0; i < a.considerations.Length; ++i) {
 					text += $"\n   ({i}) {a.considerations[i]}";
@@ -252,7 +252,7 @@ namespace RatKing.SUS {
 		public float ActiveActionAge => Time.time - actionChangeTime;
 		public bool IsConsideringActiveAction => ActiveAction == ConsideredAction;
 		public event System.Action<TTarget, Action<TTarget, TId>, Action<TTarget, TId>> OnActionChange = null; // target, prevAction, nextAction
-		List<Action<TTarget, TId>> actions = new List<Action<TTarget, TId>>();
+		readonly List<Action<TTarget, TId>> actions = new List<Action<TTarget, TId>>();
 		float actionChangeTime = 0f;
 
 		//
@@ -334,7 +334,7 @@ namespace RatKing.SUS {
 				if (a == ActiveAction) { text += "<color=yellow>"; }
 				text += a.lastCalculatedScore.ToString("0.00");
 				if (!a.id.Equals(default(TId))) { text += $" {a.id}"; }
-				if (a.scoreCalculationTime > 0f) { text += $" ({a.GetRemainingCalculationTime().ToString("0.00")})"; }
+				if (a.scoreCalculationTime > 0f) { text += $" ({a.GetRemainingCalculationTime():0.00})"; }
 				text += $" [{a.scoreCalculationStandardMethod.ToShortString()}]";
 				for (int i = 0; i < a.considerations.Length; ++i) {
 					text += $"\n   ({i}) {a.considerations[i]}";
