@@ -264,7 +264,7 @@ namespace RatKing.SUS {
 			this.actionChangeTime = Time.time;
 		}
 #else
-		public Decider(T target, DebugDisplayMode debugDisplayMode = DebugDisplayMode.None) {
+		public Decider(TTarget target, DebugDisplayMode debugDisplayMode = DebugDisplayMode.None) {
 			if (debugDisplayMode != DebugDisplayMode.None) { Debug.Log("Debug display for Decider not allowed."); }
 			this.target = target;
 			this.actionChangeTime = Time.time;
