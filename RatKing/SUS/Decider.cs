@@ -127,7 +127,7 @@ namespace RatKing.SUS {
 				if (!a.id.Equals(default(TId))) { text += $" {a.id}"; }
 				if (a.scoreCalculationTime > 0f) { text += $" ({a.GetRemainingCalculationTime():0.00})"; }
 				text += $" [{a.scoreCalculationStandardMethod.ToShortString()}]";
-				for (int i = 0; i < a.considerations.Length; ++i) {
+				for (int i = 0; i < a.considerations.Count; ++i) {
 					text += $"\n   ({i}) {a.considerations[i]}";
 				}
 				if (a == ActiveAction) { text += "</color>"; }
@@ -143,48 +143,6 @@ namespace RatKing.SUS {
 		//
 
 		/// <summary>
-		/// helper function to create a consideration
-		/// </summary>
-		/// <param name="id">name that will be shown in the debug display</param>
-		/// <param name="function">function that creates a score</param>
-		/// <returns>the new Consideration</returns>
-		public Consideration Consider(string id, System.Func<float> function) {
-			return new Consideration(id, function);
-		}
-		
-		/// <summary>
-		/// helper function to create a consideration
-		/// </summary>
-		/// <param name="function">function that creates a score</param>
-		/// <returns>the new Consideration</returns>
-		public Consideration Consider(System.Func<float> function) {
-			return new Consideration(function);
-		}
-
-		/// <summary>
-		/// helper function to create a consideration
-		/// </summary>
-		/// <param name="id">name that will be shown in the debug display</param>
-		/// <param name="function">function that creates a score</param>
-		/// <param name="calculationMethod">how to calculate this consideration (in relation to the other considerations)</param>
-		/// <returns>the new Consideration</returns>
-		public Consideration Consider(string id, System.Func<float> function, ScoreCalculationMethod calculationMethod) {
-			return new Consideration(id, function, calculationMethod);
-		}
-		
-		/// <summary>
-		/// helper function to create a consideration
-		/// </summary>
-		/// <param name="function">function that creates a score</param>
-		/// <param name="calculationMethod">how to calculate this consideration (in relation to the other considerations)</param>
-		/// <returns>the new Consideration</returns>
-		public Consideration Consider(System.Func<float> function, ScoreCalculationMethod calculationMethod) {
-			return new Consideration(function, calculationMethod);
-		}
-
-		//
-
-		/// <summary>
 		/// Add a possible action that will be chosen when its score is high enough
 		/// </summary>
 		/// <param name="id">name that will be shown in the debug display</param>
@@ -195,7 +153,8 @@ namespace RatKing.SUS {
 		/// <returns>the created and added possible action</returns>
 		public Action<TId> AddAction(TId id, System.Action onStart, System.Action onUpdate, System.Action onStop, params Consideration[] considerations) {
 			if (id.Equals(default(TId))) { Debug.Log("The default cannot be used as ID!"); return null; }
-			var pa = new Action<TId>(id, onStart, onUpdate, onStop) { considerations = considerations };
+			var pa = new Action<TId>(id, onStart, onUpdate, onStop);
+			if (considerations.Length > 0) { pa.considerations.AddRange(considerations); }
 			actions.Add(pa);
 			return pa;
 		}
@@ -210,7 +169,8 @@ namespace RatKing.SUS {
 		/// <returns>the created and added possible action</returns>
 		public Action<TId> AddAction(TId id, System.Action onStart, System.Action onUpdate, params Consideration[] considerations) {
 			if (id.Equals(default(TId))) { Debug.Log("The default cannot be used as ID!"); return null; }
-			var pa = new Action<TId>(id, onStart, onUpdate) { considerations = considerations };
+			var pa = new Action<TId>(id, onStart, onUpdate);
+			if (considerations.Length > 0) { pa.considerations.AddRange(considerations); }
 			actions.Add(pa);
 			return pa;
 		}
@@ -224,7 +184,8 @@ namespace RatKing.SUS {
 		/// <returns>the created and added possible action</returns>
 		public Action<TId> AddAction(TId id, System.Action onStart, params Consideration[] considerations) {
 			if (id.Equals(default(TId))) { Debug.Log("The default cannot be used as ID!"); return null; }
-			var pa = new Action<TId>(id, onStart) { considerations = considerations };
+			var pa = new Action<TId>(id, onStart);
+			if (considerations.Length > 0) { pa.considerations.AddRange(considerations); }
 			actions.Add(pa);
 			return pa;
 		}
@@ -237,7 +198,20 @@ namespace RatKing.SUS {
 		/// <returns>the created and added possible action</returns>
 		public Action<TId> AddAction(TId id, params Consideration[] considerations) {
 			if (id.Equals(default(TId))) { Debug.Log("The default cannot be used as ID!"); return null; }
-			var pa = new Action<TId>(id) { considerations = considerations };
+			var pa = new Action<TId>(id);
+			if (considerations.Length > 0) { pa.considerations.AddRange(considerations); }
+			actions.Add(pa);
+			return pa;
+		}
+		
+		/// <summary>
+		/// Add a possible action that will be chosen when its score is high enough
+		/// </summary>
+		/// <param name="id">name that will be shown in the debug display</param>
+		/// <returns>the created and added possible action</returns>
+		public Action<TId> AddAction(TId id) {
+			if (id.Equals(default(TId))) { Debug.Log("The default cannot be used as ID!"); return null; }
+			var pa = new Action<TId>(id);
 			actions.Add(pa);
 			return pa;
 		}
@@ -336,7 +310,7 @@ namespace RatKing.SUS {
 				if (!a.id.Equals(default(TId))) { text += $" {a.id}"; }
 				if (a.scoreCalculationTime > 0f) { text += $" ({a.GetRemainingCalculationTime():0.00})"; }
 				text += $" [{a.scoreCalculationStandardMethod.ToShortString()}]";
-				for (int i = 0; i < a.considerations.Length; ++i) {
+				for (int i = 0; i < a.considerations.Count; ++i) {
 					text += $"\n   ({i}) {a.considerations[i]}";
 				}
 				if (a == ActiveAction) { text += "</color>"; }
@@ -352,48 +326,6 @@ namespace RatKing.SUS {
 		//
 
 		/// <summary>
-		/// helper function to create a consideration
-		/// </summary>
-		/// <param name="id">name that will be shown in the debug display</param>
-		/// <param name="function">function that creates a score</param>
-		/// <returns>the new Consideration</returns>
-		public Consideration<TTarget> Consider(string id, System.Func<TTarget, float> function) {
-			return new Consideration<TTarget>(id, function);
-		}
-		
-		/// <summary>
-		/// helper function to create a consideration
-		/// </summary>
-		/// <param name="function">function that creates a score</param>
-		/// <returns>the new Consideration</returns>
-		public Consideration<TTarget> Consider(System.Func<TTarget, float> function) {
-			return new Consideration<TTarget>(function);
-		}
-
-		/// <summary>
-		/// helper function to create a consideration
-		/// </summary>
-		/// <param name="id">name that will be shown in the debug display</param>
-		/// <param name="function">function that creates a score</param>
-		/// <param name="calculationMethod">how to calculate this consideration (in relation to the other considerations)</param>
-		/// <returns>the new Consideration</returns>
-		public Consideration<TTarget> Consider(string id, System.Func<TTarget, float> function, ScoreCalculationMethod calculationMethod) {
-			return new Consideration<TTarget>(id, function, calculationMethod);
-		}
-		
-		/// <summary>
-		/// helper function to create a consideration
-		/// </summary>
-		/// <param name="function">function that creates a score</param>
-		/// <param name="calculationMethod">how to calculate this consideration (in relation to the other considerations)</param>
-		/// <returns>the new Consideration</returns>
-		public Consideration<TTarget> Consider(System.Func<TTarget, float> function, ScoreCalculationMethod calculationMethod) {
-			return new Consideration<TTarget>(function, calculationMethod);
-		}
-
-		//
-
-		/// <summary>
 		/// Add a possible action that will be chosen when its score is high enough
 		/// </summary>
 		/// <param name="id">name that will be shown in the debug display</param>
@@ -404,7 +336,8 @@ namespace RatKing.SUS {
 		/// <returns>the created and added possible action</returns>
 		public Action<TTarget, TId> AddAction(TId id, System.Action<TTarget> onStart, System.Action<TTarget> onUpdate, System.Action<TTarget> onStop, params Consideration<TTarget>[] considerations) {
 			if (id.Equals(default(TId))) { Debug.Log("The default cannot be used as ID!"); return null; }
-			var pa = new Action<TTarget, TId>(id, onStart, onUpdate, onStop) { considerations = considerations };
+			var pa = new Action<TTarget, TId>(id, onStart, onUpdate, onStop);
+			if (considerations.Length > 0) { pa.considerations.AddRange(considerations); }
 			actions.Add(pa);
 			return pa;
 		}
@@ -419,7 +352,8 @@ namespace RatKing.SUS {
 		/// <returns>the created and added possible action</returns>
 		public Action<TTarget, TId> AddAction(TId id, System.Action<TTarget> onStart, System.Action<TTarget> onUpdate, params Consideration<TTarget>[] considerations) {
 			if (id.Equals(default(TId))) { Debug.Log("The default cannot be used as ID!"); return null; }
-			var pa = new Action<TTarget, TId>(id, onStart, onUpdate) { considerations = considerations };
+			var pa = new Action<TTarget, TId>(id, onStart, onUpdate);
+			if (considerations.Length > 0) { pa.considerations.AddRange(considerations); }
 			actions.Add(pa);
 			return pa;
 		}
@@ -433,7 +367,8 @@ namespace RatKing.SUS {
 		/// <returns>the created and added possible action</returns>
 		public Action<TTarget, TId> AddAction(TId id, System.Action<TTarget> onStart, params Consideration<TTarget>[] considerations) {
 			if (id.Equals(default(TId))) { Debug.Log("The default cannot be used as ID!"); return null; }
-			var pa = new Action<TTarget, TId>(id, onStart) { considerations = considerations };
+			var pa = new Action<TTarget, TId>(id, onStart);
+			if (considerations.Length > 0) { pa.considerations.AddRange(considerations); }
 			actions.Add(pa);
 			return pa;
 		}
@@ -446,7 +381,20 @@ namespace RatKing.SUS {
 		/// <returns>the created and added possible action</returns>
 		public Action<TTarget, TId> AddAction(TId id, params Consideration<TTarget>[] considerations) {
 			if (id.Equals(default(TId))) { Debug.Log("The default cannot be used as ID!"); return null; }
-			var pa = new Action<TTarget, TId>(id) { considerations = considerations };
+			var pa = new Action<TTarget, TId>(id);
+			if (considerations.Length > 0) { pa.considerations.AddRange(considerations); }
+			actions.Add(pa);
+			return pa;
+		}
+		
+		/// <summary>
+		/// Add a possible action that will be chosen when its score is high enough
+		/// </summary>
+		/// <param name="id">name that will be shown in the debug display</param>
+		/// <returns>the created and added possible action</returns>
+		public Action<TTarget, TId> AddAction(TId id) {
+			if (id.Equals(default(TId))) { Debug.Log("The default cannot be used as ID!"); return null; }
+			var pa = new Action<TTarget, TId>(id);
 			actions.Add(pa);
 			return pa;
 		}
