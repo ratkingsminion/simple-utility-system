@@ -47,6 +47,7 @@ namespace RatKing.SUS {
 		public event System.Action<Action<TId>, Action<TId>> OnActionChange = null; // target, prevAction, nextAction
 		readonly List<Action<TId>> actions = new List<Action<TId>>();
 		float actionChangeTime = 0f;
+		Action<TId> forcedAction = null;
 
 		//
 
@@ -64,22 +65,28 @@ namespace RatKing.SUS {
 
 		public void Update(float dt) {
 			if (actions.Count == 0) { return; }
-
-			// calculate scores
-			foreach (var pa in actions) {
-				if (!pa.getsConsidered) { continue; }
-				ThisAction = ConsideredAction = pa;
-				pa.Calculate(dt);
-			}
-			ThisAction = ConsideredAction = null;
-
-			// choose action
+			
 			Action<TId> chosenAction = null;
-			var score = float.NegativeInfinity;
-			foreach (var pa in actions) {
-				if (pa.lastCalculatedScore > score) {
-					chosenAction = pa;
-					score = pa.lastCalculatedScore;
+			if (forcedAction != null) {
+				// calculate scores
+				foreach (var pa in actions) {
+					if (!pa.getsConsidered) { continue; }
+					ThisAction = ConsideredAction = pa;
+					pa.Calculate(dt);
+				}
+				ThisAction = ConsideredAction = null;
+
+				// choose action
+				chosenAction = forcedAction;
+				forcedAction = null;
+			}
+			else {
+				var score = float.NegativeInfinity;
+				foreach (var pa in actions) {
+					if (pa.lastCalculatedScore > score) {
+						chosenAction = pa;
+						score = pa.lastCalculatedScore;
+					}
 				}
 			}
 
@@ -215,6 +222,27 @@ namespace RatKing.SUS {
 			actions.Add(pa);
 			return pa;
 		}
+
+		/// <summary>
+		/// Changes the action on the next Update call to this one, overriding all considerations for one tick
+		/// </summary>
+		/// <param name="id">name of the action to force onto the decider</param>
+		/// <returns></returns>
+		public bool ForceAction(TId id) {
+			var action = actions.Find(a => a.id.Equals(id));
+			if (action == null) { return false; }
+			forcedAction = action;
+			return true;
+		}
+
+		/// <summary>
+		/// Changes the action on the next Update call to this one, overriding all considerations for one tick
+		/// </summary>
+		/// <param name="action">the action to force onto the decider</param>
+		/// <returns></returns>
+		public void ForceAction(Action<TId> action) {
+			forcedAction = action;
+		}
 	}
 
 	public class Decider<TTarget, TId> where TTarget : class {
@@ -228,6 +256,7 @@ namespace RatKing.SUS {
 		public event System.Action<TTarget, Action<TTarget, TId>, Action<TTarget, TId>> OnActionChange = null; // target, prevAction, nextAction
 		readonly List<Action<TTarget, TId>> actions = new List<Action<TTarget, TId>>();
 		float actionChangeTime = 0f;
+		Action<TTarget, TId> forcedAction = null;
 
 		//
 
@@ -247,22 +276,28 @@ namespace RatKing.SUS {
 
 		public void Update(float dt) {
 			if (actions.Count == 0) { return; }
-
-			// calculate scores
-			foreach (var pa in actions) {
-				if (!pa.getsConsidered) { continue; }
-				ThisAction = ConsideredAction = pa;
-				pa.Calculate(ref target, dt);
-			}
-			ThisAction = ConsideredAction = null;
-
-			// choose action
+			
 			Action<TTarget, TId> chosenAction = null;
-			var score = float.NegativeInfinity;
-			foreach (var pa in actions) {
-				if (pa.lastCalculatedScore > score) {
-					chosenAction = pa;
-					score = pa.lastCalculatedScore;
+			if (forcedAction != null) {
+				chosenAction = forcedAction;
+				forcedAction = null;
+			}
+			else {
+				// calculate scores
+				foreach (var pa in actions) {
+					if (!pa.getsConsidered) { continue; }
+					ThisAction = ConsideredAction = pa;
+					pa.Calculate(ref target, dt);
+				}
+				ThisAction = ConsideredAction = null;
+
+				// choose action
+				var score = float.NegativeInfinity;
+				foreach (var pa in actions) {
+					if (pa.lastCalculatedScore > score) {
+						chosenAction = pa;
+						score = pa.lastCalculatedScore;
+					}
 				}
 			}
 
@@ -397,6 +432,27 @@ namespace RatKing.SUS {
 			var pa = new Action<TTarget, TId>(id);
 			actions.Add(pa);
 			return pa;
+		}
+
+		/// <summary>
+		/// Changes the action on the next Update call to this one, overriding all considerations for one tick
+		/// </summary>
+		/// <param name="id">name of the action to force onto the decider</param>
+		/// <returns></returns>
+		public bool ForceAction(TId id) {
+			var action = actions.Find(a => a.id.Equals(id));
+			if (action == null) { return false; }
+			forcedAction = action;
+			return true;
+		}
+
+		/// <summary>
+		/// Changes the action on the next Update call to this one, overriding all considerations for one tick
+		/// </summary>
+		/// <param name="action">the action to force onto the decider</param>
+		/// <returns></returns>
+		public void ForceAction(Action<TTarget, TId> action) {
+			forcedAction = action;
 		}
 	}
 
