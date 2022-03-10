@@ -29,9 +29,9 @@ namespace RatKing.SUS {
 	//
 
 	public class Action<TId> {
-		public System.Action onStart;
-		public System.Action onUpdate;
-		public System.Action onStop;
+		public System.Action start;
+		public System.Action update;
+		public System.Action stop;
 		public List<Consideration> considerations = new List<Consideration>();
 		public Base.RangeFloat scoreCalculationMinMax = new Base.RangeFloat(0f, 1f);
 		public ScoreCalculationMethod scoreCalculationStandardMethod = ScoreCalculationMethod.Multiply;
@@ -45,19 +45,19 @@ namespace RatKing.SUS {
 
 		//
 
-		public Action(TId id = default, System.Action onStart = null, System.Action onUpdate = null, System.Action onStop = null) {
+		public Action(TId id = default, System.Action start = null, System.Action update = null, System.Action stop = null) {
 			this.id = id;
-			this.onStart = onStart;
-			this.onUpdate = onUpdate;
-			this.onStop = onStop;
+			this.start = start;
+			this.update = update;
+			this.stop = stop;
 		}
 		
 		/// <summary>
 		/// change the function that gets called on start
 		/// </summary>
 		/// <returns>the action, for currying</returns>
-		public Action<TId> OnStart(System.Action onStart) {
-			this.onStart = onStart;
+		public Action<TId> OnStart(System.Action start) {
+			this.start = start;
 			return this;
 		}
 		
@@ -65,8 +65,8 @@ namespace RatKing.SUS {
 		/// change the function that gets called on update
 		/// </summary>
 		/// <returns>the action, for currying</returns>
-		public Action<TId> OnUpdate(System.Action onUpdate) {
-			this.onUpdate = onUpdate;
+		public Action<TId> OnUpdate(System.Action update) {
+			this.update = update;
 			return this;
 		}
 		
@@ -74,8 +74,8 @@ namespace RatKing.SUS {
 		/// change the function that gets called on stop
 		/// </summary>
 		/// <returns>the action, for currying</returns>
-		public Action<TId> OnStop(System.Action onStop) {
-			this.onStop = onStop;
+		public Action<TId> OnStop(System.Action stop) {
+			this.stop = stop;
 			return this;
 		}
 			
@@ -204,9 +204,9 @@ namespace RatKing.SUS {
 	}
 
 	public class Action<TTarget, TId> {
-		public System.Action<TTarget> onStart;
-		public System.Action<TTarget> onUpdate;
-		public System.Action<TTarget> onStop;
+		public System.Action<TTarget> start;
+		public System.Action<TTarget> update;
+		public System.Action<TTarget> stop;
 		public List<Consideration<TTarget>> considerations = new List<Consideration<TTarget>>();
 		public Base.RangeFloat scoreCalculationMinMax = new Base.RangeFloat(0f, 1f);
 		public ScoreCalculationMethod scoreCalculationStandardMethod = ScoreCalculationMethod.Multiply;
@@ -220,19 +220,19 @@ namespace RatKing.SUS {
 
 		//
 
-		public Action(TId id = default, System.Action<TTarget> onStart = null, System.Action<TTarget> onUpdate = null, System.Action<TTarget> onStop = null) {
+		public Action(TId id = default, System.Action<TTarget> start = null, System.Action<TTarget> update = null, System.Action<TTarget> stop = null) {
 			this.id = id;
-			this.onStart = onStart;
-			this.onUpdate = onUpdate;
-			this.onStop = onStop;
+			this.start = start;
+			this.update = update;
+			this.stop = stop;
 		}
 		
 		/// <summary>
 		/// change the function that gets called on start
 		/// </summary>
 		/// <returns>the action, for currying</returns>
-		public Action<TTarget, TId> OnStart(System.Action<TTarget> onStart) {
-			this.onStart = onStart;
+		public Action<TTarget, TId> OnStart(System.Action<TTarget> start) {
+			this.start = start;
 			return this;
 		}
 		
@@ -240,8 +240,8 @@ namespace RatKing.SUS {
 		/// change the function that gets called on update
 		/// </summary>
 		/// <returns>the action, for currying</returns>
-		public Action<TTarget, TId> OnUpdate(System.Action<TTarget> onUpdate) {
-			this.onUpdate = onUpdate;
+		public Action<TTarget, TId> OnUpdate(System.Action<TTarget> update) {
+			this.update = update;
 			return this;
 		}
 		
@@ -249,8 +249,8 @@ namespace RatKing.SUS {
 		/// change the function that gets called on stop
 		/// </summary>
 		/// <returns>the action, for currying</returns>
-		public Action<TTarget, TId> OnStop(System.Action<TTarget> onStop) {
-			this.onStop = onStop;
+		public Action<TTarget, TId> OnStop(System.Action<TTarget> stop) {
+			this.stop = stop;
 			return this;
 		}
 			

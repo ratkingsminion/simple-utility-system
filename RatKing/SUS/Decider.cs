@@ -95,13 +95,13 @@ namespace RatKing.SUS {
 			if (ActiveAction != chosenAction) {
 				actionChangeTime = Time.time;
 				var prevAction = ActiveAction;
-				prevAction?.onStop?.Invoke();
+				prevAction?.stop?.Invoke();
 				ThisAction = ActiveAction = chosenAction;
 				OnActionChange?.Invoke(prevAction, ActiveAction);
-				chosenAction.onStart?.Invoke();
+				chosenAction.start?.Invoke();
 			}
 			if (ActiveAction != null) {
-				ActiveAction.onUpdate?.Invoke();
+				ActiveAction.update?.Invoke();
 			}
 			ThisAction = null;
 		}
@@ -306,13 +306,13 @@ namespace RatKing.SUS {
 			if (ActiveAction != chosenAction) {
 				actionChangeTime = Time.time;
 				var prevAction = ActiveAction;
-				prevAction?.onStop?.Invoke(target);
+				prevAction?.stop?.Invoke(target);
 				ThisAction = ActiveAction = chosenAction;
 				OnActionChange?.Invoke(target, prevAction, ActiveAction);
-				chosenAction.onStart?.Invoke(target);
+				chosenAction.start?.Invoke(target);
 			}
 			if (ActiveAction != null) {
-				ActiveAction.onUpdate?.Invoke(target);
+				ActiveAction.update?.Invoke(target);
 			}
 			ThisAction = null;
 		}
