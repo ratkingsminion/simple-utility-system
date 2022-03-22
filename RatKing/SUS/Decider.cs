@@ -68,6 +68,12 @@ namespace RatKing.SUS {
 			
 			Action<TId> chosenAction = null;
 			if (forcedAction != null) {
+				// clear scores
+				foreach (var pa in actions) { pa.lastCalculatedScore = pa.scoreCalculationMinMax.Lerp(pa == forcedAction ? 1f : 0f); }
+				chosenAction = forcedAction;
+				forcedAction = null;
+			}
+			else {
 				// calculate scores
 				foreach (var pa in actions) {
 					if (!pa.getsConsidered) { continue; }
@@ -77,10 +83,6 @@ namespace RatKing.SUS {
 				ThisAction = ConsideredAction = null;
 
 				// choose action
-				chosenAction = forcedAction;
-				forcedAction = null;
-			}
-			else {
 				var score = float.NegativeInfinity;
 				foreach (var pa in actions) {
 					if (pa.lastCalculatedScore > score) {
@@ -95,7 +97,7 @@ namespace RatKing.SUS {
 			if (ActiveAction != chosenAction) {
 				actionChangeTime = Time.time;
 				var prevAction = ActiveAction;
-				prevAction?.stop?.Invoke();
+				ActiveAction?.stop?.Invoke();
 				ThisAction = ActiveAction = chosenAction;
 				OnActionChange?.Invoke(prevAction, ActiveAction);
 				chosenAction.start?.Invoke();
@@ -279,6 +281,8 @@ namespace RatKing.SUS {
 			
 			Action<TTarget, TId> chosenAction = null;
 			if (forcedAction != null) {
+				// clear scores
+				foreach (var pa in actions) { pa.lastCalculatedScore = pa.scoreCalculationMinMax.Lerp(pa == forcedAction ? 1f : 0f); }
 				chosenAction = forcedAction;
 				forcedAction = null;
 			}
@@ -306,7 +310,7 @@ namespace RatKing.SUS {
 			if (ActiveAction != chosenAction) {
 				actionChangeTime = Time.time;
 				var prevAction = ActiveAction;
-				prevAction?.stop?.Invoke(target);
+				ActiveAction?.stop?.Invoke(target);
 				ThisAction = ActiveAction = chosenAction;
 				OnActionChange?.Invoke(target, prevAction, ActiveAction);
 				chosenAction.start?.Invoke(target);
@@ -454,6 +458,39 @@ namespace RatKing.SUS {
 		public void ForceAction(Action<TTarget, TId> action) {
 			forcedAction = action;
 		}
+		
+		// saving/loading
+
+		public bool SerializeActiveAction(SimpleJSON.JSONNode json) {
+			if (ActiveAction == null) { return false; }
+			json.Add("action_id", ActiveAction.id.ToString());
+			json.Add("action_age", ActiveActionAge);
+			foreach (var a in actions) {
+				json.Add("action_" + a.id + "_score", a.lastCalculatedScore);
+				foreach (var c in a.considerations) {
+					json.Add("action_" + a.id + "_consider_" + c.id, c.lastScore);
+				}
+			}
+			return true;
+		}
+
+		public bool DeserializeActiveAction(SimpleJSON.JSONNode json) {
+			if (!json.HasKey("action_id")) { return false; }
+			foreach (var a in actions) {
+				a.lastCalculatedScore = json["action_" + a.id + "_score"].AsFloat;
+				foreach (var c in a.considerations) {
+					c.lastScore = json["action_" + a.id + "_consider_" + c.id];
+				}
+			}
+			var id = json["action_id"].Value;
+			ThisAction = ActiveAction = actions.Find(a => a.id.ToString() == id);
+			actionChangeTime = Time.time - json["action_age"].AsFloat;
+			ActiveAction.onStart?.Invoke(target);
+			OnActionChange?.Invoke(target, null, ActiveAction); // TODO needed?
+			ThisAction = null;
+			return true;
+		}
+	}
 	}
 
 }
