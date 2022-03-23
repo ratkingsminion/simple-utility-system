@@ -485,12 +485,11 @@ namespace RatKing.SUS {
 			var id = json["action_id"].Value;
 			ThisAction = ActiveAction = actions.Find(a => a.id.ToString() == id);
 			actionChangeTime = Time.time - json["action_age"].AsFloat;
-			ActiveAction.onStart?.Invoke(target);
+			ActiveAction.start?.Invoke(target);
 			OnActionChange?.Invoke(target, null, ActiveAction); // TODO needed?
 			ThisAction = null;
 			return true;
 		}
-	}
 	}
 
 }
