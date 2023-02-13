@@ -1,10 +1,10 @@
 # sus
-Simple utility-theory based AI system for Unity/C#
+Simple utility-theory based AI system, usable with Unity
 
-Usage:
+Usage (Unity):
 
 ```C#
-  // a decider optionally can have a target (in this case GameObject)
+  // a decider optionally can have a target (in this case UnityEngine.GameObject)
   SUS.Decider<GameObject> decider;
   
   void Start() {
@@ -17,15 +17,15 @@ Usage:
         go => { go.transform.localScale += Vector3.one * Time.deltaTime; }, // onUpdate
         go => { go.transform.localScale = Vector3.one; } // onStop
       )
-      .Consider(go => 0.75f * Random.value)
-      .ScoreCalculationTime(0.25f)
+      .Consider(go => 0.75 * Random.value)
+      .ScoreCalculationTime(0.25)
       .UserData("red");
     
     // action creation type B - add callbacks via currying
     decider.AddAction("B")
       .OnStart(go => { go.GetComponent<Renderer>().material.color = Color.green; })
-      .Consider(go => (Time.time * 0.5f) % 1f)
-      .ScoreCalculationTime(0.25f)
+      .Consider(go => (Time.time * 0.5) % 1.0)
+      .ScoreCalculationTime(0.25)
       .UserData("green");
     
     decider.OnActionChange += (go, prevAction, nextAction) => Debug.Log(nextAction.userData);

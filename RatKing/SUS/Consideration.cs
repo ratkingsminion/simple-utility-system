@@ -2,13 +2,13 @@ namespace RatKing.SUS {
 	
 	public class Consideration {
 		public string id;
-		public System.Func<float> function;
-		public float lastScore = 0f;
+		public System.Func<double> function;
+		public double lastScore = 0f;
 		public ScoreCalculationMethod method = ScoreCalculationMethod.Standard;
-		public Consideration(string id, System.Func<float> function, ScoreCalculationMethod method) { this.id = id; this.function = function; this.method = method; }
-		public Consideration(System.Func<float> function, ScoreCalculationMethod method) { this.id = null; this.function = function; this.method = method; }
-		public Consideration(string id, System.Func<float> function) { this.id = id; this.function = function; }
-		public Consideration(System.Func<float> function) { this.id = null; this.function = function; }
+		public Consideration(string id, System.Func<double> function, ScoreCalculationMethod method) { this.id = id; this.function = function; this.method = method; }
+		public Consideration(System.Func<double> function, ScoreCalculationMethod method) { this.id = null; this.function = function; this.method = method; }
+		public Consideration(string id, System.Func<double> function) { this.id = id; this.function = function; }
+		public Consideration(System.Func<double> function) { this.id = null; this.function = function; }
 
 		//
 
@@ -22,13 +22,13 @@ namespace RatKing.SUS {
 	
 	public class Consideration<T> {
 		public string id;
-		public System.Func<T, float> function;
-		public float lastScore = 0f;
+		public System.Func<T, double> function;
+		public double lastScore = 0f;
 		public ScoreCalculationMethod method = ScoreCalculationMethod.Standard;
-		public Consideration(string id, System.Func<T, float> function, ScoreCalculationMethod method) { this.id = id; this.function = function; this.method = method; }
-		public Consideration(System.Func<T, float> function, ScoreCalculationMethod method) { this.id = null; this.function = function; this.method = method; }
-		public Consideration(string id, System.Func<T, float> function) { this.id = id; this.function = function; }
-		public Consideration(System.Func<T, float> function) { this.id = null; this.function = function; }
+		public Consideration(string id, System.Func<T, double> function, ScoreCalculationMethod method) { this.id = id; this.function = function; this.method = method; }
+		public Consideration(System.Func<T, double> function, ScoreCalculationMethod method) { this.id = null; this.function = function; this.method = method; }
+		public Consideration(string id, System.Func<T, double> function) { this.id = id; this.function = function; }
+		public Consideration(System.Func<T, double> function) { this.id = null; this.function = function; }
 
 		//
 

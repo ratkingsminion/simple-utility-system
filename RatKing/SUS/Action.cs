@@ -3,7 +3,6 @@
 #endif
 
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace RatKing.SUS {
 
@@ -33,15 +32,16 @@ namespace RatKing.SUS {
 		public System.Action update;
 		public System.Action stop;
 		public List<Consideration> considerations = new List<Consideration>();
-		public Base.RangeFloat scoreCalculationMinMax = new Base.RangeFloat(0f, 1f);
+		public (double min, double max) scoreCalculationMinMax = (0.0, 1.0);
 		public ScoreCalculationMethod scoreCalculationStandardMethod = ScoreCalculationMethod.Multiply;
-		public float scoreCalculationTime = 0f;
-		public float lastCalculatedScore = 0f;
+		public double scoreCalculationTime = 0.0;
+		public double lastCalculatedScore = 0.0;
 		public TId id;
 		public object userData;
 		public bool getsConsidered = true;
-		//
-		float curScoreCalculateTime = 0f;
+		
+		double curScoreCalculateTime = 0.0;
+		readonly static System.Random random = new System.Random();
 
 		//
 
@@ -94,7 +94,7 @@ namespace RatKing.SUS {
 		/// <param name="id">name that will be shown in the debug display</param>
 		/// <param name="function">function that creates a score</param>
 		/// <returns>the action, for currying</returns>
-		public Action<TId> Consider(string id, System.Func<float> function) {
+		public Action<TId> Consider(string id, System.Func<double> function) {
 			considerations.Add(new Consideration(id, function));
 			return this;
 		}
@@ -105,7 +105,7 @@ namespace RatKing.SUS {
 		/// </summary>
 		/// <param name="function">function that creates a score</param>
 		/// <returns>the action, for currying</returns>
-		public Action<TId> Consider(System.Func<float> function) {
+		public Action<TId> Consider(System.Func<double> function) {
 			considerations.Add(new Consideration(function));
 			return this;
 		}
@@ -117,7 +117,7 @@ namespace RatKing.SUS {
 		/// <param name="function">function that creates a score</param>
 		/// <param name="calculationMethod">how to calculate this consideration (in relation to the other considerations)</param>
 		/// <returns>the action, for currying</returns>
-		public Action<TId> Consider(string id, System.Func<float> function, ScoreCalculationMethod calculationMethod) {
+		public Action<TId> Consider(string id, System.Func<double> function, ScoreCalculationMethod calculationMethod) {
 			considerations.Add(new Consideration(id, function, calculationMethod));
 			return this;
 		}
@@ -128,20 +128,14 @@ namespace RatKing.SUS {
 		/// <param name="function">function that creates a score</param>
 		/// <param name="calculationMethod">how to calculate this consideration (in relation to the other considerations)</param>
 		/// <returns>the action, for currying</returns>
-		public Action<TId> Consider(System.Func<float> function, ScoreCalculationMethod calculationMethod) {
+		public Action<TId> Consider(System.Func<double> function, ScoreCalculationMethod calculationMethod) {
 			considerations.Add(new Consideration(function, calculationMethod));
 			return this;
 		}
 
-		public Action<TId> ScoreCalculationMinMax(Base.RangeFloat range) {
-			lastCalculatedScore = scoreCalculationMinMax.RemapTo(range, lastCalculatedScore);
-			this.scoreCalculationMinMax = range;
-			return this;
-		}
-
-		public Action<TId> ScoreCalculationMinMax(float min, float max) {
-			lastCalculatedScore = scoreCalculationMinMax.RemapTo(min, max, lastCalculatedScore);
-			this.scoreCalculationMinMax = new Base.RangeFloat(min, max);
+		public Action<TId> ScoreCalculationMinMax(double min, double max) {
+			lastCalculatedScore = ((max - min) * (lastCalculatedScore - scoreCalculationMinMax.min) / (scoreCalculationMinMax.max - scoreCalculationMinMax.min)) + min;
+			this.scoreCalculationMinMax = (min, max);
 			return this;
 		}
 
@@ -152,7 +146,7 @@ namespace RatKing.SUS {
 
 		public Action<TId> ScoreCalculationTime(float scoreCalculationTime, bool randomizeStartTime = true) {
 			this.scoreCalculationTime = scoreCalculationTime;
-			if (randomizeStartTime) { this.curScoreCalculateTime = Random.value * scoreCalculationTime; }
+			if (randomizeStartTime) { this.curScoreCalculateTime = (float)random.NextDouble() * scoreCalculationTime; }
 			return this;
 		}
 
@@ -163,17 +157,17 @@ namespace RatKing.SUS {
 
 		//
 
-		public void Calculate(float dt) {
+		public void Calculate(double dt) {
 			curScoreCalculateTime += dt;
 			if (curScoreCalculateTime < scoreCalculationTime) { return; }
-			curScoreCalculateTime = 0f;
+			curScoreCalculateTime = 0.0;
 			var considerationCount = considerations.Count;
 			if (considerationCount == 0) {
 				lastCalculatedScore = scoreCalculationMinMax.min;
 			}
 			else if (considerationCount == 1) {
 				lastCalculatedScore = considerations[0].lastScore = considerations[0].function();
-				lastCalculatedScore = scoreCalculationMinMax.Lerp(lastCalculatedScore);
+				lastCalculatedScore = scoreCalculationMinMax.min + (scoreCalculationMinMax.max - scoreCalculationMinMax.min) * lastCalculatedScore;
 			}
 			else {
 				var curCon = considerations[0];
@@ -184,21 +178,21 @@ namespace RatKing.SUS {
 				for (int i = 1; i < considerationCount; ++i) {
 					curCon = considerations[i];
 					switch (curCon.method == ScoreCalculationMethod.Standard ? scoreCalculationStandardMethod : curCon.method) {
-						case ScoreCalculationMethod.Max: lastCalculatedScore = Mathf.Max(lastCalculatedScore, (curCon.lastScore = curCon.function())); break;
-						case ScoreCalculationMethod.Min: lastCalculatedScore = Mathf.Min(lastCalculatedScore, (curCon.lastScore = curCon.function())); break;
+						case ScoreCalculationMethod.Max: lastCalculatedScore = System.Math.Max(lastCalculatedScore, (curCon.lastScore = curCon.function())); break;
+						case ScoreCalculationMethod.Min: lastCalculatedScore = System.Math.Min(lastCalculatedScore, (curCon.lastScore = curCon.function())); break;
 						case ScoreCalculationMethod.Add: lastCalculatedScore += (curCon.lastScore = curCon.function()); break;
 						case ScoreCalculationMethod.Average: lastCalculatedScore += (curCon.lastScore = curCon.function()) / considerationCount; break;
 						default: case ScoreCalculationMethod.Multiply: lastCalculatedScore *= (curCon.lastScore = curCon.function()); break;
 					}
 				}
 
-				lastCalculatedScore = scoreCalculationMinMax.Lerp(lastCalculatedScore);
+				lastCalculatedScore = scoreCalculationMinMax.min + (scoreCalculationMinMax.max - scoreCalculationMinMax.min) * lastCalculatedScore;
 			}
 		}
 		
 		//
 		
-		public float GetRemainingCalculationTime() {
+		public double GetRemainingCalculationTime() {
 			return scoreCalculationTime - curScoreCalculateTime;
 		}
 	}
@@ -208,15 +202,16 @@ namespace RatKing.SUS {
 		public System.Action<TTarget> update;
 		public System.Action<TTarget> stop;
 		public List<Consideration<TTarget>> considerations = new List<Consideration<TTarget>>();
-		public Base.RangeFloat scoreCalculationMinMax = new Base.RangeFloat(0f, 1f);
+		public (double min, double max) scoreCalculationMinMax = (0.0, 1.0);
 		public ScoreCalculationMethod scoreCalculationStandardMethod = ScoreCalculationMethod.Multiply;
-		public float scoreCalculationTime = 0f;
-		public float lastCalculatedScore = 0f;
+		public double scoreCalculationTime = 0.0;
+		public double lastCalculatedScore = 0.0;
 		public TId id;
 		public object userData;
 		public bool getsConsidered = true;
-		//
-		float curScoreCalculateTime = 0f;
+
+		double curScoreCalculateTime = 0.0;
+		readonly static System.Random random = new System.Random();
 
 		//
 
@@ -269,7 +264,7 @@ namespace RatKing.SUS {
 		/// <param name="id">name that will be shown in the debug display</param>
 		/// <param name="function">function that creates a score</param>
 		/// <returns>the action, for currying</returns>
-		public Action<TTarget, TId> Consider(string id, System.Func<TTarget, float> function) {
+		public Action<TTarget, TId> Consider(string id, System.Func<TTarget, double> function) {
 			considerations.Add(new Consideration<TTarget>(id, function));
 			return this;
 		}
@@ -280,7 +275,7 @@ namespace RatKing.SUS {
 		/// </summary>
 		/// <param name="function">function that creates a score</param>
 		/// <returns>the action, for currying</returns>
-		public Action<TTarget, TId> Consider(System.Func<TTarget, float> function) {
+		public Action<TTarget, TId> Consider(System.Func<TTarget, double> function) {
 			considerations.Add(new Consideration<TTarget>(function));
 			return this;
 		}
@@ -292,7 +287,7 @@ namespace RatKing.SUS {
 		/// <param name="function">function that creates a score</param>
 		/// <param name="calculationMethod">how to calculate this consideration (in relation to the other considerations)</param>
 		/// <returns>the action, for currying</returns>
-		public Action<TTarget, TId> Consider(string id, System.Func<TTarget, float> function, ScoreCalculationMethod calculationMethod) {
+		public Action<TTarget, TId> Consider(string id, System.Func<TTarget, double> function, ScoreCalculationMethod calculationMethod) {
 			considerations.Add(new Consideration<TTarget>(id, function, calculationMethod));
 			return this;
 		}
@@ -303,20 +298,14 @@ namespace RatKing.SUS {
 		/// <param name="function">function that creates a score</param>
 		/// <param name="calculationMethod">how to calculate this consideration (in relation to the other considerations)</param>
 		/// <returns>the action, for currying</returns>
-		public Action<TTarget, TId> Consider(System.Func<TTarget, float> function, ScoreCalculationMethod calculationMethod) {
+		public Action<TTarget, TId> Consider(System.Func<TTarget, double> function, ScoreCalculationMethod calculationMethod) {
 			considerations.Add(new Consideration<TTarget>(function, calculationMethod));
 			return this;
 		}
 
-		public Action<TTarget, TId> ScoreCalculationMinMax(Base.RangeFloat range) {
-			lastCalculatedScore = scoreCalculationMinMax.RemapTo(range, lastCalculatedScore);
-			this.scoreCalculationMinMax = range;
-			return this;
-		}
-
-		public Action<TTarget, TId> ScoreCalculationMinMax(float min, float max) {
-			lastCalculatedScore = scoreCalculationMinMax.RemapTo(min, max, lastCalculatedScore);
-			this.scoreCalculationMinMax = new Base.RangeFloat(min, max);
+		public Action<TTarget, TId> ScoreCalculationMinMax(double min, double max) {
+			lastCalculatedScore = ((max - min) * (lastCalculatedScore - scoreCalculationMinMax.min) / (scoreCalculationMinMax.max - scoreCalculationMinMax.min)) + min;
+			this.scoreCalculationMinMax = (min, max);
 			return this;
 		}
 
@@ -327,7 +316,7 @@ namespace RatKing.SUS {
 
 		public Action<TTarget, TId> ScoreCalculationTime(float scoreCalculationTime, bool randomizeStartTime = true) {
 			this.scoreCalculationTime = scoreCalculationTime;
-			if (randomizeStartTime) { this.curScoreCalculateTime = Random.value * scoreCalculationTime; }
+			if (randomizeStartTime) { this.curScoreCalculateTime = (float)random.NextDouble() * scoreCalculationTime; }
 			return this;
 		}
 
@@ -338,17 +327,17 @@ namespace RatKing.SUS {
 
 		//
 
-		public void Calculate(ref TTarget target, float dt) {
+		public void Calculate(ref TTarget target, double dt) {
 			curScoreCalculateTime += dt;
 			if (curScoreCalculateTime < scoreCalculationTime) { return; }
-			curScoreCalculateTime = 0f;
+			curScoreCalculateTime = 0.0;
 			var considerationCount = considerations.Count;
 			if (considerationCount == 0) {
 				lastCalculatedScore = scoreCalculationMinMax.min;
 			}
 			else if (considerationCount == 1) {
 				lastCalculatedScore = considerations[0].lastScore = considerations[0].function(target);
-				lastCalculatedScore = scoreCalculationMinMax.Lerp(lastCalculatedScore);
+				lastCalculatedScore = scoreCalculationMinMax.min + (scoreCalculationMinMax.max - scoreCalculationMinMax.min) * lastCalculatedScore;
 			}
 			else {
 				var curCon = considerations[0];
@@ -359,21 +348,21 @@ namespace RatKing.SUS {
 				for (int i = 1; i < considerationCount; ++i) {
 					curCon = considerations[i];
 					switch (curCon.method == ScoreCalculationMethod.Standard ? scoreCalculationStandardMethod : curCon.method) {
-						case ScoreCalculationMethod.Max: lastCalculatedScore = Mathf.Max(lastCalculatedScore, (curCon.lastScore = curCon.function(target))); break;
-						case ScoreCalculationMethod.Min: lastCalculatedScore = Mathf.Min(lastCalculatedScore, (curCon.lastScore = curCon.function(target))); break;
+						case ScoreCalculationMethod.Max: lastCalculatedScore = System.Math.Max(lastCalculatedScore, (curCon.lastScore = curCon.function(target))); break;
+						case ScoreCalculationMethod.Min: lastCalculatedScore = System.Math.Min(lastCalculatedScore, (curCon.lastScore = curCon.function(target))); break;
 						case ScoreCalculationMethod.Add: lastCalculatedScore += (curCon.lastScore = curCon.function(target)); break;
 						case ScoreCalculationMethod.Average: lastCalculatedScore += (curCon.lastScore = curCon.function(target)) / considerationCount; break;
 						default: case ScoreCalculationMethod.Multiply: lastCalculatedScore *= (curCon.lastScore = curCon.function(target)); break;
 					}
 				}
 
-				lastCalculatedScore = scoreCalculationMinMax.Lerp(lastCalculatedScore);
+				lastCalculatedScore = scoreCalculationMinMax.min + (scoreCalculationMinMax.max - scoreCalculationMinMax.min) * lastCalculatedScore;
 			}
 		}
 		
 		//
 		
-		public float GetRemainingCalculationTime() {
+		public double GetRemainingCalculationTime() {
 			return scoreCalculationTime - curScoreCalculateTime;
 		}
 	}

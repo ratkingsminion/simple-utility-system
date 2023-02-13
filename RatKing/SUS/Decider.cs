@@ -1,9 +1,9 @@
-#if UNITY_EDITOR
-#define ALLOW_IMGUI_DEBUG
+#if UNITY_5_3_OR_NEWER
+#define ALLOW_UNITY_IMGUI_DEBUG
+using UnityEngine;
 #endif
 
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace RatKing.SUS {
 
@@ -13,7 +13,7 @@ namespace RatKing.SUS {
 		Minimized
 	}
 
-#if ALLOW_IMGUI_DEBUG
+#if ALLOW_UNITY_IMGUI_DEBUG
 	public class DeciderDebugDraw : MonoBehaviour {
 		public class DebugDraw { public object target; public System.Func<object, float, DebugDraw, float> draw; public DebugDisplayMode display; public Vector2 scrollPosDebug; }
 
@@ -42,34 +42,52 @@ namespace RatKing.SUS {
 		public Action<TId> ActiveAction { get; private set; } = null;
 		public Action<TId> ConsideredAction { get; private set; } = null; // only valid during consideration!
 		public Action<TId> ThisAction { get; private set; } = null; // only valid during consideration and execution of active action!
-		public float ActiveActionAge => Time.time - actionChangeTime;
+		public double ActiveActionAge => (System.DateTime.UtcNow - actionChangeTime).TotalSeconds;
+		public float ActiveActionAgeF => (float)(System.DateTime.UtcNow - actionChangeTime).TotalSeconds;
 		public bool IsConsideringActiveAction => ActiveAction == ConsideredAction;
 		public event System.Action<Action<TId>, Action<TId>> OnActionChange = null; // target, prevAction, nextAction
+		
 		readonly List<Action<TId>> actions = new List<Action<TId>>();
-		float actionChangeTime = 0f;
+		System.DateTime actionChangeTime;
 		Action<TId> forcedAction = null;
+		event System.Action<string> LogError;
 
 		//
 
-#if ALLOW_IMGUI_DEBUG
+#if ALLOW_UNITY_IMGUI_DEBUG
 		public Decider(DebugDisplayMode debugDisplayMode = DebugDisplayMode.None) {
+			LogError = UnityEngine.Debug.LogError;
 			if (debugDisplayMode != DebugDisplayMode.None) { DeciderDebugDraw.Inst.AddDebugDraw(this, DebugGUI, debugDisplayMode); }
-			this.actionChangeTime = Time.time;
+			this.actionChangeTime = System.DateTime.UtcNow;
+		}
+		
+		public Decider(System.Action<string> logError, DebugDisplayMode debugDisplayMode = DebugDisplayMode.None) {
+			LogError = logError;
+			if (debugDisplayMode != DebugDisplayMode.None) { DeciderDebugDraw.Inst.AddDebugDraw(this, DebugGUI, debugDisplayMode); }
+			this.actionChangeTime = System.DateTime.UtcNow;
 		}
 #else
+#if UNITY_5_3_OR_NEWER
 		public Decider(DebugDisplayMode debugDisplayMode = DebugDisplayMode.None) {
-			if (debugDisplayMode != DebugDisplayMode.None) { Debug.Log("Debug display for Decider not allowed."); }
-			this.actionChangeTime = Time.time;
+			LogError = UnityEngine.Debug.LogError;
+			if (debugDisplayMode != DebugDisplayMode.None) { LogError("Debug display for Decider not allowed."); }
+			this.actionChangeTime = System.DateTime.UtcNow;
+		}
+#endif
+		public Decider(System.Action<string> logError, DebugDisplayMode debugDisplayMode = DebugDisplayMode.None) {
+			LogError = logError;
+			if (debugDisplayMode != DebugDisplayMode.None) { LogError("Debug display for Decider not allowed."); }
+			this.actionChangeTime = System.DateTime.UtcNow;
 		}
 #endif
 
-		public void Update(float dt) {
+		public void Update(double dt) {
 			if (actions.Count == 0) { return; }
 			
 			Action<TId> chosenAction = null;
 			if (forcedAction != null) {
 				// clear scores
-				foreach (var pa in actions) { pa.lastCalculatedScore = pa.scoreCalculationMinMax.Lerp(pa == forcedAction ? 1f : 0f); }
+				foreach (var pa in actions) { pa.lastCalculatedScore = (pa == forcedAction) ? pa.scoreCalculationMinMax.max : pa.scoreCalculationMinMax.min; }
 				chosenAction = forcedAction;
 				forcedAction = null;
 			}
@@ -83,7 +101,7 @@ namespace RatKing.SUS {
 				ThisAction = ConsideredAction = null;
 
 				// choose action
-				var score = float.NegativeInfinity;
+				var score = double.NegativeInfinity;
 				foreach (var pa in actions) {
 					if (pa.lastCalculatedScore > score) {
 						chosenAction = pa;
@@ -95,7 +113,7 @@ namespace RatKing.SUS {
 			// switch current action
 			ThisAction = ActiveAction;
 			if (ActiveAction != chosenAction) {
-				actionChangeTime = Time.time;
+				actionChangeTime = System.DateTime.UtcNow;
 				var prevAction = ActiveAction;
 				ActiveAction?.stop?.Invoke();
 				ThisAction = ActiveAction = chosenAction;
@@ -108,7 +126,7 @@ namespace RatKing.SUS {
 			ThisAction = null;
 		}
 
-#if ALLOW_IMGUI_DEBUG
+#if ALLOW_UNITY_IMGUI_DEBUG
 		float DebugGUI(object target, float drawX, DeciderDebugDraw.DebugDraw dd) {
 			var width = dd.display == DebugDisplayMode.Minimized ? 46f : 180f;
 			var styleLine = new GUIStyle("label") { richText = true, alignment = TextAnchor.UpperLeft, wordWrap = false };
@@ -161,7 +179,7 @@ namespace RatKing.SUS {
 		/// <param name="considerations">considerations calculate the score; use decider.Consider() helper functions to create them</param>
 		/// <returns>the created and added possible action</returns>
 		public Action<TId> AddAction(TId id, System.Action onStart, System.Action onUpdate, System.Action onStop, params Consideration[] considerations) {
-			if (id.Equals(default(TId))) { Debug.Log("The default cannot be used as ID!"); return null; }
+			if (id.Equals(default(TId))) { LogError("The default cannot be used as ID!"); return null; }
 			var pa = new Action<TId>(id, onStart, onUpdate, onStop);
 			if (considerations.Length > 0) { pa.considerations.AddRange(considerations); }
 			actions.Add(pa);
@@ -177,7 +195,7 @@ namespace RatKing.SUS {
 		/// <param name="considerations">considerations calculate the score; use decider.Consider() helper functions to create them</param>
 		/// <returns>the created and added possible action</returns>
 		public Action<TId> AddAction(TId id, System.Action onStart, System.Action onUpdate, params Consideration[] considerations) {
-			if (id.Equals(default(TId))) { Debug.Log("The default cannot be used as ID!"); return null; }
+			if (id.Equals(default(TId))) { LogError("The default cannot be used as ID!"); return null; }
 			var pa = new Action<TId>(id, onStart, onUpdate);
 			if (considerations.Length > 0) { pa.considerations.AddRange(considerations); }
 			actions.Add(pa);
@@ -192,7 +210,7 @@ namespace RatKing.SUS {
 		/// <param name="considerations">considerations calculate the score; use decider.Consider() helper functions to create them</param>
 		/// <returns>the created and added possible action</returns>
 		public Action<TId> AddAction(TId id, System.Action onStart, params Consideration[] considerations) {
-			if (id.Equals(default(TId))) { Debug.Log("The default cannot be used as ID!"); return null; }
+			if (id.Equals(default(TId))) { LogError("The default cannot be used as ID!"); return null; }
 			var pa = new Action<TId>(id, onStart);
 			if (considerations.Length > 0) { pa.considerations.AddRange(considerations); }
 			actions.Add(pa);
@@ -206,7 +224,7 @@ namespace RatKing.SUS {
 		/// <param name="considerations">considerations calculate the score; use decider.Consider() helper functions to create them</param>
 		/// <returns>the created and added possible action</returns>
 		public Action<TId> AddAction(TId id, params Consideration[] considerations) {
-			if (id.Equals(default(TId))) { Debug.Log("The default cannot be used as ID!"); return null; }
+			if (id.Equals(default(TId))) { LogError("The default cannot be used as ID!"); return null; }
 			var pa = new Action<TId>(id);
 			if (considerations.Length > 0) { pa.considerations.AddRange(considerations); }
 			actions.Add(pa);
@@ -219,7 +237,7 @@ namespace RatKing.SUS {
 		/// <param name="id">name that will be shown in the debug display</param>
 		/// <returns>the created and added possible action</returns>
 		public Action<TId> AddAction(TId id) {
-			if (id.Equals(default(TId))) { Debug.Log("The default cannot be used as ID!"); return null; }
+			if (id.Equals(default(TId))) { LogError("The default cannot be used as ID!"); return null; }
 			var pa = new Action<TId>(id);
 			actions.Add(pa);
 			return pa;
@@ -253,36 +271,57 @@ namespace RatKing.SUS {
 		public Action<TTarget, TId> ActiveAction { get; private set; } = null;
 		public Action<TTarget, TId> ConsideredAction { get; private set; } = null; // only valid during consideration!
 		public Action<TTarget, TId> ThisAction { get; private set; } = null; // only valid during consideration and execution of active action!
-		public float ActiveActionAge => Time.time - actionChangeTime;
+		public double ActiveActionAge => (System.DateTime.UtcNow - actionChangeTime).TotalSeconds;
+		public float ActiveActionAgeF => (float)(System.DateTime.UtcNow - actionChangeTime).TotalSeconds;
 		public bool IsConsideringActiveAction => ActiveAction == ConsideredAction;
 		public event System.Action<TTarget, Action<TTarget, TId>, Action<TTarget, TId>> OnActionChange = null; // target, prevAction, nextAction
+		
 		readonly List<Action<TTarget, TId>> actions = new List<Action<TTarget, TId>>();
-		float actionChangeTime = 0f;
+		System.DateTime actionChangeTime;
 		Action<TTarget, TId> forcedAction = null;
+		event System.Action<string> LogError;
 
 		//
+		
 
-#if ALLOW_IMGUI_DEBUG
+#if ALLOW_UNITY_IMGUI_DEBUG
 		public Decider(TTarget target, DebugDisplayMode debugDisplayMode = DebugDisplayMode.None) {
+			LogError = UnityEngine.Debug.LogError;
 			if (debugDisplayMode != DebugDisplayMode.None) { DeciderDebugDraw.Inst.AddDebugDraw(target, DebugGUI, debugDisplayMode); }
 			this.target = target;
-			this.actionChangeTime = Time.time;
+			this.actionChangeTime = System.DateTime.UtcNow;
+		}
+		
+		public Decider(System.Action<string> logError, TTarget target, DebugDisplayMode debugDisplayMode = DebugDisplayMode.None) {
+			LogError = logError;
+			if (debugDisplayMode != DebugDisplayMode.None) { DeciderDebugDraw.Inst.AddDebugDraw(target, DebugGUI, debugDisplayMode); }
+			this.target = target;
+			this.actionChangeTime = System.DateTime.UtcNow;
 		}
 #else
+#if UNITY_5_3_OR_NEWER
 		public Decider(TTarget target, DebugDisplayMode debugDisplayMode = DebugDisplayMode.None) {
-			if (debugDisplayMode != DebugDisplayMode.None) { Debug.Log("Debug display for Decider not allowed."); }
+			LogError = UnityEngine.Debug.LogError;
+			if (debugDisplayMode != DebugDisplayMode.None) { LogError("Debug display for Decider not allowed."); }
 			this.target = target;
-			this.actionChangeTime = Time.time;
+			this.actionChangeTime = System.DateTime.UtcNow;
+		}
+#endif
+		public Decider(System.Action<string> logError, TTarget target, DebugDisplayMode debugDisplayMode = DebugDisplayMode.None) {
+			LogError = logError;
+			if (debugDisplayMode != DebugDisplayMode.None) { LogError("Debug display for Decider not allowed."); }
+			this.target = target;
+			this.actionChangeTime = System.DateTime.UtcNow;
 		}
 #endif
 
-		public void Update(float dt) {
+		public void Update(double dt) {
 			if (actions.Count == 0) { return; }
 			
 			Action<TTarget, TId> chosenAction = null;
 			if (forcedAction != null) {
 				// clear scores
-				foreach (var pa in actions) { pa.lastCalculatedScore = pa.scoreCalculationMinMax.Lerp(pa == forcedAction ? 1f : 0f); }
+				foreach (var pa in actions) { pa.lastCalculatedScore = (pa == forcedAction) ? pa.scoreCalculationMinMax.max : pa.scoreCalculationMinMax.min; }
 				chosenAction = forcedAction;
 				forcedAction = null;
 			}
@@ -296,7 +335,7 @@ namespace RatKing.SUS {
 				ThisAction = ConsideredAction = null;
 
 				// choose action
-				var score = float.NegativeInfinity;
+				var score = double.NegativeInfinity;
 				foreach (var pa in actions) {
 					if (pa.lastCalculatedScore > score) {
 						chosenAction = pa;
@@ -308,7 +347,7 @@ namespace RatKing.SUS {
 			// switch current action
 			ThisAction = ActiveAction;
 			if (ActiveAction != chosenAction) {
-				actionChangeTime = Time.time;
+				actionChangeTime = System.DateTime.UtcNow;
 				var prevAction = ActiveAction;
 				ActiveAction?.stop?.Invoke(target);
 				ThisAction = ActiveAction = chosenAction;
@@ -321,7 +360,7 @@ namespace RatKing.SUS {
 			ThisAction = null;
 		}
 
-#if ALLOW_IMGUI_DEBUG
+#if ALLOW_UNITY_IMGUI_DEBUG
 		float DebugGUI(object target, float drawX, DeciderDebugDraw.DebugDraw dd) {
 			var width = dd.display == DebugDisplayMode.Minimized ? 46f : 180f;
 			var styleLine = new GUIStyle("label") { richText = true, alignment = TextAnchor.UpperLeft, wordWrap = false };
@@ -374,7 +413,7 @@ namespace RatKing.SUS {
 		/// <param name="considerations">considerations calculate the score; use decider.Consider() helper functions to create them</param>
 		/// <returns>the created and added possible action</returns>
 		public Action<TTarget, TId> AddAction(TId id, System.Action<TTarget> onStart, System.Action<TTarget> onUpdate, System.Action<TTarget> onStop, params Consideration<TTarget>[] considerations) {
-			if (id.Equals(default(TId))) { Debug.Log("The default cannot be used as ID!"); return null; }
+			if (id.Equals(default(TId))) { LogError("The default cannot be used as ID!"); return null; }
 			var pa = new Action<TTarget, TId>(id, onStart, onUpdate, onStop);
 			if (considerations.Length > 0) { pa.considerations.AddRange(considerations); }
 			actions.Add(pa);
@@ -390,7 +429,7 @@ namespace RatKing.SUS {
 		/// <param name="considerations">considerations calculate the score; use decider.Consider() helper functions to create them</param>
 		/// <returns>the created and added possible action</returns>
 		public Action<TTarget, TId> AddAction(TId id, System.Action<TTarget> onStart, System.Action<TTarget> onUpdate, params Consideration<TTarget>[] considerations) {
-			if (id.Equals(default(TId))) { Debug.Log("The default cannot be used as ID!"); return null; }
+			if (id.Equals(default(TId))) { LogError("The default cannot be used as ID!"); return null; }
 			var pa = new Action<TTarget, TId>(id, onStart, onUpdate);
 			if (considerations.Length > 0) { pa.considerations.AddRange(considerations); }
 			actions.Add(pa);
@@ -405,7 +444,7 @@ namespace RatKing.SUS {
 		/// <param name="considerations">considerations calculate the score; use decider.Consider() helper functions to create them</param>
 		/// <returns>the created and added possible action</returns>
 		public Action<TTarget, TId> AddAction(TId id, System.Action<TTarget> onStart, params Consideration<TTarget>[] considerations) {
-			if (id.Equals(default(TId))) { Debug.Log("The default cannot be used as ID!"); return null; }
+			if (id.Equals(default(TId))) { LogError("The default cannot be used as ID!"); return null; }
 			var pa = new Action<TTarget, TId>(id, onStart);
 			if (considerations.Length > 0) { pa.considerations.AddRange(considerations); }
 			actions.Add(pa);
@@ -419,7 +458,7 @@ namespace RatKing.SUS {
 		/// <param name="considerations">considerations calculate the score; use decider.Consider() helper functions to create them</param>
 		/// <returns>the created and added possible action</returns>
 		public Action<TTarget, TId> AddAction(TId id, params Consideration<TTarget>[] considerations) {
-			if (id.Equals(default(TId))) { Debug.Log("The default cannot be used as ID!"); return null; }
+			if (id.Equals(default(TId))) { LogError("The default cannot be used as ID!"); return null; }
 			var pa = new Action<TTarget, TId>(id);
 			if (considerations.Length > 0) { pa.considerations.AddRange(considerations); }
 			actions.Add(pa);
@@ -432,7 +471,7 @@ namespace RatKing.SUS {
 		/// <param name="id">name that will be shown in the debug display</param>
 		/// <returns>the created and added possible action</returns>
 		public Action<TTarget, TId> AddAction(TId id) {
-			if (id.Equals(default(TId))) { Debug.Log("The default cannot be used as ID!"); return null; }
+			if (id.Equals(default(TId))) { LogError("The default cannot be used as ID!"); return null; }
 			var pa = new Action<TTarget, TId>(id);
 			actions.Add(pa);
 			return pa;
@@ -477,14 +516,14 @@ namespace RatKing.SUS {
 		public bool DeserializeActiveAction(SimpleJSON.JSONNode json) {
 			if (!json.HasKey("action_id")) { return false; }
 			foreach (var a in actions) {
-				a.lastCalculatedScore = json["action_" + a.id + "_score"].AsFloat;
+				a.lastCalculatedScore = json["action_" + a.id + "_score"].AsDouble;
 				foreach (var c in a.considerations) {
 					c.lastScore = json["action_" + a.id + "_consider_" + c.id];
 				}
 			}
 			var id = json["action_id"].Value;
 			ThisAction = ActiveAction = actions.Find(a => a.id.ToString() == id);
-			actionChangeTime = Time.time - json["action_age"].AsFloat;
+			actionChangeTime = System.DateTime.UtcNow.AddSeconds(json["action_age"].AsDouble);
 			ActiveAction.start?.Invoke(target);
 			OnActionChange?.Invoke(target, null, ActiveAction); // TODO needed?
 			ThisAction = null;
